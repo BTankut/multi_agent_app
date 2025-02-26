@@ -4,6 +4,12 @@
 
 Multi_Agent System is an AI orchestration platform that intelligently routes user queries to specialized AI models based on content type and complexity. The system analyzes queries, selects appropriate specialized models from OpenRouter, dynamically manages the number of agents, and synthesizes their responses into coherent answers.
 
+## GitHub Repository
+
+- **URL**: https://github.com/BTankut/multi_agent_app
+- **First Commit**: 2025-02-26
+- **License**: MIT
+
 ## Core Components
 
 - **Coordinator**: Analyzes queries and orchestrates communication between models
@@ -112,3 +118,12 @@ multi_agent_app/
 - Run CLI interface: `python multi_agent_cli.py [free|paid|optimized]`
 - Test API connection: `python test_api.py`
 - Component testing: `python quick_test.py`
+
+## Git Commands
+
+- Clone repository: `git clone https://github.com/BTankut/multi_agent_app.git`
+- Update repository: `git pull origin main`
+- Check status: `git status`
+- Create new branch: `git checkout -b feature/new-feature`
+- Commit changes: `git add . && git commit -m "Description of changes"`
+- Push changes: `git push origin branch-name`
