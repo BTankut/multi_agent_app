@@ -36,27 +36,48 @@ def load_json(file_path):
 def get_openrouter_models():
     """
     Fetches available models from OpenRouter API.
+    Includes retry logic for better reliability.
     """
     if not OPENROUTER_API_KEY:
         return []
     
-    try:
-        headers = {
-            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-            "Content-Type": "application/json"
-        }
-        
-        response = requests.get(
-            "https://openrouter.ai/api/v1/models",
-            headers=headers,
-            timeout=10
-        )
-        
-        response.raise_for_status()
-        return response.json().get('data', [])
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Error fetching OpenRouter models: {str(e)}")
-        return []
+    max_retries = 2
+    retry_count = 0
+    backoff_factor = 1.5  # seconds
+    
+    while retry_count <= max_retries:
+        try:
+            headers = {
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.get(
+                "https://openrouter.ai/api/v1/models",
+                headers=headers,
+                timeout=15  # Increased from 10 to 15 seconds
+            )
+            
+            response.raise_for_status()
+            models_data = response.json().get('data', [])
+            
+            # Log the number of models retrieved
+            logger.info(f"Successfully retrieved {len(models_data)} models from OpenRouter")
+            
+            return models_data
+            
+        except requests.exceptions.RequestException as e:
+            retry_count += 1
+            if retry_count <= max_retries:
+                sleep_time = backoff_factor * (2 ** (retry_count - 1))
+                logger.warning(f"Retry {retry_count}/{max_retries} for fetching models after {sleep_time}s due to: {str(e)}")
+                time.sleep(sleep_time)
+            else:
+                logger.error(f"Error fetching OpenRouter models after {max_retries} retries: {str(e)}")
+                return []
+        except Exception as e:
+            logger.error(f"Unexpected error fetching OpenRouter models: {str(e)}")
+            return []
 
 def call_agent(model_name, role, query, openrouter_models, conversation_history=None):
     """
@@ -92,9 +113,9 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
         logger.info(f"Calling model: {model_name} with {len(messages)} messages")
         
         # Make API request with retry logic
-        max_retries = 2
+        max_retries = 3  # Increased from 2 to 3
         retry_count = 0
-        backoff_factor = 1  # seconds
+        backoff_factor = 2  # Increased from 1 to 2 seconds
         
         while retry_count <= max_retries:
             try:
@@ -106,18 +127,28 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                         "model": model_name,
                         "messages": messages
                     },
-                    timeout=30
+                    timeout=45  # Increased from 30 to 45 seconds
                 )
                 response.raise_for_status()
                 result = response.json()
                 
+                # More robust error handling
+                if not isinstance(result, dict):
+                    raise ValueError(f"Expected dict response, got {type(result).__name__}")
+                
                 # Check if choices exists in the response
                 if 'choices' not in result or not result['choices']:
-                    raise KeyError("'choices' not found in response or empty")
+                    # More detailed error handling for debugging
+                    error_msg = "'choices' not found in response or empty"
+                    logger.error(f"{error_msg}. Response keys: {list(result.keys())}")
+                    raise KeyError(error_msg)
+                
+                if not result['choices'][0].get('message', {}).get('content'):
+                    raise KeyError("No content found in response message")
                     
                 return result['choices'][0]['message']['content']
                 
-            except (requests.exceptions.RequestException, KeyError) as e:
+            except (requests.exceptions.RequestException, KeyError, ValueError) as e:
                 retry_count += 1
                 if retry_count <= max_retries:
                     # Exponential backoff

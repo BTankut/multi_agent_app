@@ -50,6 +50,7 @@ def get_models_by_labels(labels, option, openrouter_models, min_models=1, max_mo
     """
     Selects models based on labels, user option, and OpenRouter models.
     Respects min_models and max_models constraints.
+    Limits models per provider to avoid rate limiting issues.
     """
     model_labels_data = load_json("data/model_labels.json")
     if not model_labels_data:
@@ -87,11 +88,15 @@ def get_models_by_labels(labels, option, openrouter_models, min_models=1, max_mo
     if max_models is not None:
         filtered_models = filtered_models[:max_models]
     
+    # Apply provider diversity constraints to ensure we don't overuse any single provider
+    filtered_models = limit_models_per_provider(filtered_models, max_per_provider=2)
+    
     return filtered_models
 
 def select_optimized_models(matching_models, query_labels, openrouter_models):
     """
     Selects the most cost-effective models from the matching candidates.
+    Includes consideration for provider diversity.
     """
     if not openrouter_models:
         return []
@@ -127,20 +132,37 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
                 efficiency = ((prompt_cost + completion_cost) * context_length) / 1000.0
                 relevance_score = sum(1 for label in query_labels if label in model_labels)
                 
+                # Extract provider for diversity bonus
+                provider = model_name.split('/')[0] if '/' in model_name else "unknown"
+                
                 # Combined score (lower is better)
                 total_score = efficiency * 0.3 - relevance_score * 0.7
-                model_costs.append((model_name, total_score))
+                model_costs.append((model_name, total_score, provider))
             except (KeyError, TypeError) as e:
                 logger.error(f"Error processing pricing for {model_name}: {e}")
-                model_costs.append((model_name, float('inf')))
+                model_costs.append((model_name, float('inf'), "unknown"))
         else:
             # If model not found in OpenRouter, give it an infinite cost
             logger.warning(f"Model {model_name} not found in OpenRouter models")
-            model_costs.append((model_name, float('inf')))
+            provider = model_name.split('/')[0] if '/' in model_name else "unknown"
+            model_costs.append((model_name, float('inf'), provider))
 
     # Sort by score (lower is better)
     model_costs.sort(key=lambda x: x[1])
-    optimized_models = [model for model, _ in model_costs]
+    
+    # Implement manual provider diversity by selecting from different providers
+    provider_counts = {}
+    optimized_models = []
+    
+    for model, _, provider in model_costs:
+        # Skip if we've already selected too many models from this provider
+        if provider in provider_counts and provider_counts[provider] >= 2:
+            continue
+            
+        # Add model and increment provider count
+        optimized_models.append(model)
+        provider_counts[provider] = provider_counts.get(provider, 0) + 1
+    
     return optimized_models
 
 def calculate_similarity(response1, response2):
@@ -166,6 +188,42 @@ def calculate_similarity(response1, response2):
     randomized_similarity = basic_similarity * 0.5 + random.uniform(0.5, 0.9) * 0.5
     
     return min(randomized_similarity, 1.0)
+
+def limit_models_per_provider(models, max_per_provider=2):
+    """
+    Limits the number of models from each provider to avoid rate limiting issues.
+    Returns a list of models with at most max_per_provider models from each provider.
+    
+    Example:
+        - Input: ["anthropic/claude-3", "anthropic/claude-2", "google/gemini-1", "google/gemini-2", "google/gemini-3"]
+        - Output (with max_per_provider=2): ["anthropic/claude-3", "anthropic/claude-2", "google/gemini-1", "google/gemini-2"]
+    """
+    if not models:
+        return []
+        
+    provider_counts = {}
+    diversified_models = []
+    
+    for model in models:
+        # Extract provider from model name (assuming format is provider/model_name)
+        provider = model.split('/')[0] if '/' in model else "unknown"
+        
+        # Initialize provider count if not already present
+        if provider not in provider_counts:
+            provider_counts[provider] = 0
+            
+        # Add model if we haven't reached the limit for this provider
+        if provider_counts[provider] < max_per_provider:
+            diversified_models.append(model)
+            provider_counts[provider] += 1
+            
+    # Log the model selection for debugging
+    logger.info(f"Selected {len(diversified_models)} models after applying provider diversity constraints")
+    for provider, count in provider_counts.items():
+        if count > 0:
+            logger.info(f"  - {provider}: {count} models")
+            
+    return diversified_models
 
 def determine_complexity(query, labels):
     """

@@ -60,35 +60,103 @@ def main():
         if 'coordinator_models' not in st.session_state:
             st.session_state.coordinator_models = []
             
-        # Button to refresh coordinator models
-        if st.button("Refresh Coordinator Models"):
-            with st.spinner("Fetching models from OpenRouter..."):
-                # Get fresh models from OpenRouter
-                st.session_state.openrouter_models = get_openrouter_models()
-                
-                # Define base trusted models for coordination
-                base_coordinator_models = [
-                    "anthropic/claude-3.5-haiku", 
-                    "anthropic/claude-3.5-sonnet",
-                    "anthropic/claude-3-sonnet", 
-                    "openai/gpt-4o",
-                    "openai/gpt-3.5-turbo",
-                    "google/gemini-2.0-pro-exp-02-05:free",
-                    "mistralai/mistral-small-24b-instruct-2501:free"
-                ]
-                
-                # Reset coordinator models list
-                st.session_state.coordinator_models = base_coordinator_models.copy()
-                
-                # Add all OpenRouter models to the coordinator list
-                if st.session_state.openrouter_models:
-                    for model in st.session_state.openrouter_models:
-                        model_id = model.get('id', '')
-                        if model_id and model_id not in st.session_state.coordinator_models:
-                            st.session_state.coordinator_models.append(model_id)
-                
-                # Show success message
-                st.success(f"Found {len(st.session_state.coordinator_models)} available models")
+        # Butonlar için satır oluştur
+        col1, col2 = st.columns(2)
+        
+        # Coordinator modellerini yenile butonu
+        with col1:
+            if st.button("Refresh Coordinator Models"):
+                with st.spinner("Fetching models from OpenRouter..."):
+                    # Get fresh models from OpenRouter
+                    st.session_state.openrouter_models = get_openrouter_models()
+                    
+                    # Define base trusted models for coordination
+                    base_coordinator_models = [
+                        "anthropic/claude-3.5-sonnet", 
+                        "qwen/qwen-max",
+                        "mistralai/mistral-large-2411",
+                        "openai/gpt-4o-mini",
+                        "anthropic/claude-3.5-haiku", 
+                        "anthropic/claude-3-sonnet", 
+                        "openai/gpt-4o",
+                        "openai/gpt-3.5-turbo",
+                        "mistralai/mistral-small-24b-instruct-2501:free",
+                        "google/gemini-2.0-pro-exp-02-05:free"  # Moved to end due to potential issues
+                    ]
+                    
+                    # Reset coordinator models list
+                    st.session_state.coordinator_models = base_coordinator_models.copy()
+                    
+                    # Add all OpenRouter models to the coordinator list
+                    if st.session_state.openrouter_models:
+                        for model in st.session_state.openrouter_models:
+                            model_id = model.get('id', '')
+                            if model_id and model_id not in st.session_state.coordinator_models:
+                                st.session_state.coordinator_models.append(model_id)
+                    
+                    # Show success message
+                    st.success(f"Found {len(st.session_state.coordinator_models)} available models")
+        
+        # Tek bir güncelleme butonu
+        if st.button("Update Model Data", type="primary"):
+            with st.spinner("Updating models and roles from OpenRouter..."):
+                try:
+                    # External Python script aracılığıyla model etiketlerini ve rollerini güncelle
+                    import subprocess
+                    import sys
+                    import tempfile
+                    
+                    # Model etiketlerini güncelle
+                    labels_result = subprocess.run(
+                        [sys.executable, "update_model_labels.py"],
+                        capture_output=True,
+                        text=True
+                    )
+                    
+                    # Sonra model rollerini güncelle (sıralama önemli)
+                    roles_result = subprocess.run(
+                        [sys.executable, "update_model_roles.py"],
+                        capture_output=True,
+                        text=True
+                    )
+                    
+                    # Her iki güncelleme de başarılı mıydı?
+                    if labels_result.returncode == 0 and roles_result.returncode == 0:
+                        # Model bilgilerini çıkart
+                        import re
+                        
+                        # Etiket güncelleme bilgileri
+                        total_match = re.search(r'(\d+) toplam model', labels_result.stdout)
+                        new_match = re.search(r'(\d+) yeni model', labels_result.stdout)
+                        updated_match = re.search(r'(\d+) mevcut model', labels_result.stdout)
+                        
+                        total = total_match.group(1) if total_match else "?"
+                        new = new_match.group(1) if new_match else "0"
+                        updated = updated_match.group(1) if updated_match else "0"
+                        
+                        # Rol güncelleme bilgileri
+                        labels_match = re.search(r'(\d+) etiket tanımı', roles_result.stdout)
+                        roles_match = re.search(r'(\d+) rol promptu', roles_result.stdout)
+                        
+                        labels = labels_match.group(1) if labels_match else "?"
+                        roles = roles_match.group(1) if roles_match else "?"
+                        
+                        # Başarılı güncelleme mesajı
+                        st.success(f"""✅ Model data successfully updated:
+                        - {total} models total ({new} new, {updated} updated)
+                        - {labels} label definitions
+                        - {roles} role prompts""")
+                        
+                        # Otomatik olarak OpenRouter modellerini yenile
+                        st.session_state.openrouter_models = get_openrouter_models()
+                    else:
+                        # Hata durumu
+                        if labels_result.returncode != 0:
+                            st.error(f"❌ Error updating model labels: {labels_result.stderr}")
+                        if roles_result.returncode != 0:
+                            st.error(f"❌ Error updating model roles: {roles_result.stderr}")
+                except Exception as e:
+                    st.error(f"❌ Failed to update model data: {str(e)}")
         
         # Show note about coordinator models (only once)
         if st.session_state.coordinator_models:
@@ -97,13 +165,16 @@ def main():
         else:
             # Initial set of coordinator models
             st.session_state.coordinator_models = [
+                "anthropic/claude-3.5-sonnet", 
+                "qwen/qwen-max",
+                "mistralai/mistral-large-2411",
+                "openai/gpt-4o-mini",
                 "anthropic/claude-3.5-haiku", 
-                "anthropic/claude-3.5-sonnet",
                 "anthropic/claude-3-sonnet", 
                 "openai/gpt-4o",
                 "openai/gpt-3.5-turbo",
-                "google/gemini-2.0-pro-exp-02-05:free",
-                "mistralai/mistral-small-24b-instruct-2501:free"
+                "mistralai/mistral-small-24b-instruct-2501:free",
+                "google/gemini-2.0-pro-exp-02-05:free"  # Moved to end due to potential issues
             ]
             st.info("Click 'Refresh Coordinator Models' to see all available models from OpenRouter")
         

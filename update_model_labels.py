@@ -1,143 +1,265 @@
-import json
+#!/usr/bin/env python3
+"""
+Model Etiketleri Güncelleme Aracı
+OpenRouter API'den güncel model listesini çekerek model_labels.json dosyasını günceller.
+Mevcut etiketleri korur ve yeni modeller için akıllı etiketleme yapar.
+"""
+
 import os
-from dotenv import load_dotenv
+import json
+import re
 import requests
+import logging
+import time
+from dotenv import load_dotenv
 
-# Load OpenRouter API key
+# Logging ayarları
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Load environment variables
 load_dotenv()
-api_key = os.getenv("OPENROUTER_API_KEY")
-if not api_key:
-    print("ERROR: OPENROUTER_API_KEY not found in environment variables.")
-    exit(1)
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-# Fetch available models from OpenRouter
-headers = {
-    "Authorization": f"Bearer {api_key}",
-    "Content-Type": "application/json"
-}
+# Sabit dosya yolları
+MODEL_LABELS_FILE = "data/model_labels.json"
+MODEL_ROLES_FILE = "data/model_roles.json"
+BACKUP_DIR = "data/backups"
 
-response = requests.get(
-    "https://openrouter.ai/api/v1/models",
-    headers=headers,
-    timeout=10
-)
+def ensure_backup_dir():
+    """Yedekleme dizininin var olduğundan emin olur"""
+    if not os.path.exists(BACKUP_DIR):
+        os.makedirs(BACKUP_DIR)
+        logger.info(f"Yedekleme dizini oluşturuldu: {BACKUP_DIR}")
 
-response.raise_for_status()
-openrouter_models = response.json().get('data', [])
+def load_json(file_path):
+    """JSON dosyasını yükler"""
+    try:
+        with open(file_path, 'r') as file:
+            return json.load(file)
+    except Exception as e:
+        logger.error(f"Dosya yüklenirken hata: {e}")
+        return None
 
-# Create a lookup dictionary for model IDs
-openrouter_model_ids = {model['id'].lower() for model in openrouter_models}
+def save_json(file_path, data):
+    """JSON verilerini dosyaya kaydeder"""
+    try:
+        with open(file_path, 'w') as file:
+            json.dump(data, file, indent=2)
+        logger.info(f"Dosya başarıyla kaydedildi: {file_path}")
+        return True
+    except Exception as e:
+        logger.error(f"Dosya kaydedilirken hata: {e}")
+        return False
 
-# Load current model_labels.json
-with open('data/model_labels.json', 'r') as f:
-    model_labels = json.load(f)
-
-# Create mapping from old names to new names
-model_mapping = {
-    "Perplexity: R1 1776": "perplexity/r1-1776",
-    "Mistral: Saba": "mistralai/mistral-saba",
-    "Dolphin3.0 R1 Mistral 24B (free)": "cognitivecomputations/dolphin3.0-r1-mistral-24b:free",
-    "Dolphin3.0 Mistral 24B (free)": "cognitivecomputations/dolphin3.0-mistral-24b:free",
-    "Llama Guard 3 8B": "meta-llama/llama-guard-3-8b",
-    "OpenAI: o3 Mini High": "openai/o3-mini-high",
-    "Llama 3.1 Tulu 3 405B": "allenai/llama-3.1-tulu-3-405b",
-    "DeepSeek: R1 Distill Llama 8B": "deepseek/deepseek-r1-distill-llama-8b",
-    "Google: Gemini Flash 2.0": "google/gemini-2.0-flash-001",
-    "Google: Gemini Flash Lite 2.0 Preview (free)": "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "Google: Gemini Pro 2.0 Experimental (free)": "google/gemini-2.0-pro-exp-02-05:free",
-    "Qwen: Qwen VL Plus (free)": "qwen/qwen-vl-plus:free",
-    "AionLabs: Aion-1.0": "aion-labs/aion-1.0",
-    "AionLabs: Aion-1.0-Mini": "aion-labs/aion-1.0-mini",
-    "AionLabs: Aion-RP 1.0 (8B)": "aion-labs/aion-rp-llama-3.1-8b",
-    "Qwen: Qwen-Turbo": "qwen/qwen-turbo",
-    "Qwen2.5 VL 72B Instruct (free)": "qwen/qwen2.5-vl-72b-instruct:free",
-    "Qwen: Qwen-Plus": "qwen/qwen-plus",
-    "Qwen: Qwen-Max": "qwen/qwen-max",
-    "OpenAI: o3 Mini": "openai/o3-mini",
-    "DeepSeek: R1 Distill Qwen 1.5B": "deepseek/deepseek-r1-distill-qwen-1.5b",
-    "Mistral: Mistral Small 3 (free)": "mistralai/mistral-small-24b-instruct-2501:free",
-    "Mistral: Mistral Small 3": "mistralai/mistral-small-24b-instruct-2501",
-    "DeepSeek: R1 Distill Qwen 32B": "deepseek/deepseek-r1-distill-qwen-32b",
-    "DeepSeek: R1 Distill Qwen 14B": "deepseek/deepseek-r1-distill-qwen-14b",
-    "Perplexity: Sonar Reasoning": "perplexity/sonar-reasoning",
-    "Perplexity: Sonar": "perplexity/sonar",
-    "Liquid: LFM 7B": "liquid/lfm-7b",
-    "Liquid: LFM 3B": "liquid/lfm-3b",
-    "DeepSeek: R1 Distill Llama 70B (free)": "deepseek/deepseek-r1-distill-llama-70b:free",
-    "DeepSeek: R1 Distill Llama 70B": "deepseek/deepseek-r1-distill-llama-70b",
-    "Google: Gemini 2.0 Flash Thinking Experimental 01-21 (free)": "google/gemini-2.0-flash-thinking-exp-1219:free",
-    "DeepSeek: R1 (free)": "deepseek/deepseek-r1:free",
-    "DeepSeek: R1": "deepseek/deepseek-r1",
-    "Rogue Rose 103B v0.2 (free)": "sophosympatheia/rogue-rose-103b-v0.2:free",
-    "MiniMax: MiniMax-01": "minimax/minimax-01",
-    "Mistral: Codestral 2501": "mistralai/codestral-2501",
-    "Microsoft: Phi 4": "microsoft/phi-4",
-    "Sao10K: Llama 3.1 70B Hanami x1": "sao10k/l3.1-70b-hanami-x1",
-    "DeepSeek: DeepSeek V3 (free)": "deepseek/deepseek-chat:free",
-    "DeepSeek: DeepSeek V3": "deepseek/deepseek-chat",
-    "Qwen: QvQ 72B Preview": "qwen/qvq-72b-preview",
-    "Google: Gemini 2.0 Flash Thinking Experimental (free)": "google/gemini-2.0-flash-thinking-exp:free",
-    "Sao10K: Llama 3.3 Euryale 70B": "sao10k/l3.3-euryale-70b",
-    "OpenAI: o1": "openai/o1",
-    "EVA Llama 3.33 70B": "eva-unit-01/eva-llama-3.33-70b",
-    "xAI: Grok 2 Vision 1212": "x-ai/grok-2-vision-1212",
-    "xAI: Grok 2 1212": "x-ai/grok-2-1212",
-    "Cohere: Command R7B (12-2024)": "cohere/command-r7b-12-2024",
-    "Google: Gemini Flash 2.0 Experimental (free)": "google/gemini-2.0-flash-exp:free",
-    "Google: Gemini Experimental 1206 (free)": "google/gemini-exp-1206:free",
-    "Meta: Llama 3.3 70B Instruct (free)": "meta-llama/llama-3.3-70b-instruct:free",
-    "Meta: Llama 3.3 70B Instruct": "meta-llama/llama-3.3-70b-instruct",
-    "Amazon: Nova Lite 1.0": "amazon/nova-lite-v1",
-    "Amazon: Nova Micro 1.0": "amazon/nova-micro-v1",
-    "Amazon: Nova Pro 1.0": "amazon/nova-pro-v1",
-    "Qwen: QwQ 32B Preview": "qwen/qwq-32b-preview",
-    "Google: LearnLM 1.5 Pro Experimental (free)": "google/learnlm-1.5-pro-experimental:free",
-    "EVA Qwen2.5 72B": "eva-unit-01/eva-qwen-2.5-72b",
-    "OpenAI: GPT-4o (2024-11-20)": "openai/gpt-4o-2024-11-20",
-    "Mistral Large 2411": "mistralai/mistral-large-2411",
-    "Mistral Large 2407": "mistralai/mistral-large-2407",
-    "Mistral: Pixtral Large 2411": "mistralai/pixtral-large-2411",
-    "xAI: Grok Vision Beta": "x-ai/grok-vision-beta",
-    "Infermatic: Mistral Nemo Inferor 12B": "infermatic/mn-inferor-12b",
-    "Qwen2.5 Coder 32B Instruct": "qwen/qwen-2.5-coder-32b-instruct",
-    "SorcererLM 8x22B": "raifle/sorcererlm-8x22b"
-}
-
-# Update model names in model_labels.json
-updated_model_labels = []
-for entry in model_labels:
-    old_model_name = entry["model"]
+def backup_file(file_path):
+    """Bir dosyanın zaman damgalı yedeğini oluşturur"""
+    ensure_backup_dir()
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    filename = os.path.basename(file_path)
+    backup_path = f"{BACKUP_DIR}/{filename}-{timestamp}.bak"
     
-    # Use mapping if available
-    if old_model_name in model_mapping:
-        new_model_name = model_mapping[old_model_name]
-    # Try to guess based on name patterns
-    else:
-        # Extract model ID from various formats
-        if ": " in old_model_name:
-            provider, model_name = old_model_name.split(": ", 1)
-            # Convert to lowercase with dashes instead of spaces
-            provider_lower = provider.lower()
-            model_name_lower = model_name.replace(" ", "-").lower()
-            potential_name = f"{provider_lower}/{model_name_lower}"
-            
-            # Check if this exists in OpenRouter
-            if potential_name.lower() in openrouter_model_ids:
-                new_model_name = potential_name
-            else:
-                # Keep the old name if we can't find a match
-                new_model_name = old_model_name
-                print(f"Could not find matching OpenRouter ID for: {old_model_name}")
+    try:
+        data = load_json(file_path)
+        if data:
+            save_json(backup_path, data)
+            logger.info(f"Yedek oluşturuldu: {backup_path}")
+            return True
+    except Exception as e:
+        logger.error(f"Yedekleme sırasında hata: {e}")
+    
+    return False
+
+def get_openrouter_models():
+    """OpenRouter'dan mevcut modelleri çeker"""
+    if not OPENROUTER_API_KEY:
+        logger.error("OPENROUTER_API_KEY bulunamadı!")
+        return []
+    
+    try:
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(
+            "https://openrouter.ai/api/v1/models",
+            headers=headers,
+            timeout=15
+        )
+        
+        response.raise_for_status()
+        models = response.json().get('data', [])
+        logger.info(f"OpenRouter'dan {len(models)} model alındı")
+        return models
+    except Exception as e:
+        logger.error(f"OpenRouter'dan model listesi alınırken hata: {e}")
+        return []
+
+def get_available_labels():
+    """model_roles.json'dan mevcut etiketleri yükler"""
+    roles_data = load_json(MODEL_ROLES_FILE)
+    if not roles_data or "labels" not in roles_data:
+        logger.error("Model rolleri yüklenemedi veya 'labels' anahtarı bulunamadı")
+        return []
+    
+    return [label_entry['label'] for label_entry in roles_data['labels']]
+
+def get_existing_model_labels():
+    """Mevcut model_labels.json'dan model-etiket eşleştirmelerini yükler"""
+    model_data = load_json(MODEL_LABELS_FILE)
+    if not model_data:
+        logger.error("Model etiketleri yüklenemedi")
+        return {}
+    
+    # Model ve etiketlerini sözlük olarak döndür
+    return {entry.get("model", ""): entry.get("labels", []) for entry in model_data if "model" in entry}
+
+def determine_labels_for_model(model_info, available_labels, existing_labels):
+    """
+    Bir model için etiketleri belirler. Önce mevcut etiketleri kullanır, 
+    model yeni ise akıllı etiketleme yapar.
+    """
+    model_id = model_info.get('id', '')
+    
+    # Eğer model zaten etiketlenmişse, mevcut etiketleri kullan
+    if model_id in existing_labels:
+        return existing_labels[model_id]
+    
+    # Yeni model için etiketleri belirle
+    labels = ["general_assistant"]  # Her model en az genel asistan olarak işaretlenir
+    
+    # Ücret durumuna göre etiketleme
+    try:
+        prompt_price = model_info.get('pricing', {}).get('prompt', '0')
+        # Sayısal değere dönüştür (string olabilir)
+        prompt_price = float(prompt_price) if prompt_price else 0
+        
+        if prompt_price > 0:
+            labels.append("paid") 
         else:
-            new_model_name = old_model_name
-            print(f"Could not parse model name format: {old_model_name}")
+            labels.append("free")
+    except (ValueError, TypeError):
+        # Dönüştürme hatası durumunda varsayılan olarak free etiketini ekle
+        labels.append("free")
     
-    # Update entry with new model name
-    entry["model"] = new_model_name
-    updated_model_labels.append(entry)
+    # Model ID'sine göre otomatik etiketleme
+    model_id_lower = model_id.lower()
+    model_name = model_info.get('name', '').lower()
+    
+    # Code/Coding uzmanı modelleri
+    if any(term in model_id_lower or term in model_name for term in ["code", "coding", "coder", "codestral", "phi-3"]):
+        if "code_expert" in available_labels:
+            labels.append("code_expert")
+    
+    # Matematik uzmanı modelleri
+    if any(term in model_id_lower or term in model_name for term in ["math", "numeric", "gemini", "gpt-4", "claude-3", "o1", "mixtral"]):
+        if "math_expert" in available_labels:
+            labels.append("math_expert")
+    
+    # Görüntü işleme modelleri
+    if any(term in model_id_lower or term in model_name for term in ["vision", "vl", "image", "pixtral", "visual"]):
+        if "vision_expert" in available_labels:
+            labels.append("vision_expert")
+    
+    # Deneysel modeller
+    if any(term in model_id_lower for term in ["exp", "experimental", "beta", "preview"]):
+        if "experimental" in available_labels:
+            labels.append("experimental")
+    
+    # Akıl yürütme uzmanları
+    if any(term in model_id_lower or term in model_name for term in ["reasoning", "gemini", "claude", "gpt-4", "o1", "mixtral"]):
+        if "reasoning_expert" in available_labels:
+            labels.append("reasoning_expert")
+    
+    # Hızlı yanıt modelleri
+    if any(term in model_id_lower for term in ["flash", "haiku", "mini", "small", "fast"]):
+        if "fast_response" in available_labels:
+            labels.append("fast_response")
+    
+    # Talimat takip etme
+    if "instruct" in model_id_lower:
+        if "instruction_following" in available_labels:
+            labels.append("instruction_following")
+    
+    # Çokdilli modeller
+    if any(term in model_id_lower for term in ["multilingual", "multi-lingual"]):
+        if "multilingual" in available_labels:
+            labels.append("multilingual")
+    
+    # Model boyutuna göre etiketleme
+    size_match = re.search(r'(\d+)[bB]', model_id)
+    if size_match:
+        size = int(size_match.group(1))
+        if size >= 70:  # Büyük modeller genellikle akıl yürütmede daha iyidir
+            if "reasoning_expert" in available_labels and "reasoning_expert" not in labels:
+                labels.append("reasoning_expert")
+    
+    # Etiketleri benzersiz yap
+    return list(set(labels))
 
-# Save updated model_labels.json
-with open('data/model_labels.json', 'w') as f:
-    json.dump(updated_model_labels, f, indent=2)
+def update_model_labels():
+    """
+    OpenRouter API'den model listesini çeker ve model_labels.json dosyasını günceller.
+    Mevcut etiketleri korur ve yeni modeller için otomatik etiketleme yapar.
+    """
+    # Mevcut dosyaları yedekle
+    if not backup_file(MODEL_LABELS_FILE):
+        logger.warning("Yedekleme yapılamadı, devam etmek istiyor musunuz? (y/n)")
+        response = input().lower()
+        if response != 'y':
+            logger.info("Güncelleme işlemi iptal edildi")
+            return False
+    
+    # Veri kaynaklarını yükle
+    openrouter_models = get_openrouter_models()
+    available_labels = get_available_labels()
+    existing_labels = get_existing_model_labels()
+    
+    if not openrouter_models:
+        logger.error("OpenRouter modelleri alınamadı, işlem iptal ediliyor")
+        return False
+    
+    if not available_labels:
+        logger.error("Kullanılabilir etiketler yüklenemedi, işlem iptal ediliyor")
+        return False
+    
+    # Yeni model_labels.json verisi oluştur
+    new_model_labels = []
+    updated_count = 0
+    new_count = 0
+    
+    for model in openrouter_models:
+        model_id = model.get('id', '')
+        if not model_id:
+            continue
+        
+        # Model etiketlerini belirle
+        labels = determine_labels_for_model(model, available_labels, existing_labels)
+        
+        # Yeni veya güncellenen model sayısını izle
+        if model_id in existing_labels:
+            if set(labels) != set(existing_labels[model_id]):
+                updated_count += 1
+        else:
+            new_count += 1
+        
+        # Modeli yeni listeye ekle
+        new_model_labels.append({
+            "model": model_id,
+            "labels": labels
+        })
+    
+    # Değişiklikleri kaydet
+    if save_json(MODEL_LABELS_FILE, new_model_labels):
+        logger.info(f"Model etiketleri güncellendi: {len(new_model_labels)} toplam model")
+        logger.info(f"  - {new_count} yeni model eklendi")
+        logger.info(f"  - {updated_count} mevcut model güncellendi")
+        return True
+    else:
+        logger.error("Model etiketleri güncellenirken hata oluştu")
+        return False
 
-print(f"Updated model_labels.json with {len(updated_model_labels)} entries.")
+if __name__ == "__main__":
+    logger.info("Model etiketleri güncelleme aracı başlatılıyor...")
+    update_model_labels()

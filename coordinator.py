@@ -93,6 +93,17 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
         if 'process_log' in st.session_state:
             st.session_state.process_log.append(f"Removing coordinator model {coordinator_model} from agent selection to avoid conflicts")
         selected_models.remove(coordinator_model)
+        
+    # Log provider diversity information
+    if 'process_log' in st.session_state:
+        providers = {}
+        for model in selected_models:
+            provider = model.split('/')[0] if '/' in model else "unknown"
+            providers[provider] = providers.get(provider, 0) + 1
+        
+        st.session_state.process_log.append(f"Provider diversity: {len(providers)} different providers")
+        for provider, count in providers.items():
+            st.session_state.process_log.append(f"  • {provider}: {count} models")
     
     # Store selected models in session state for UI display
     if 'selected_agents' in st.session_state:
