@@ -3,6 +3,7 @@ import logging
 import time
 from utils import get_openrouter_models, handle_error
 from coordinator import process_query
+import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -506,16 +507,6 @@ def main():
                 sanitized_answer = re.sub(pattern, replacement, sanitized_answer)
                 
             # Display the sanitized answer
-            result_placeholder.markdown(f"### Response\n{sanitized_answer}")$', r'\1'),              # Remove $ math delimiters
-                (r'\\frac\{([^}]*)\}\{([^}]*)\}', r'\1/\2'),  # Replace \frac{a}{b} with a/b
-                (r'\\sqrt\{([^}]*)\}', r'sqrt(\1)')   # Replace \sqrt{x} with sqrt(x)
-            ]
-            
-            # Apply all replacements
-            for pattern, replacement in latex_replacements:
-                sanitized_answer = re.sub(pattern, replacement, sanitized_answer)
-                
-            # Display the sanitized answer
             result_placeholder.markdown(f"### Response\n{sanitized_answer}")
             
             # Mark as successful
@@ -741,7 +732,7 @@ def main():
                             st.markdown("**📊 Usage:**")
                             st.markdown(f"- {usage['total_tokens']} tokens")
                             if usage['total_cost'] > 0:
-                                st.markdown(f"- ${usage['total_cost']:.3f}/1M tokens")
+                                st.markdown(f"- ${usage['total_cost']:.4f}/1M tokens")
                             else:
                                 st.markdown(f"- Free")
                             st.markdown(f"- {usage['total_time']:.2f}s")
