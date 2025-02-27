@@ -1,9 +1,9 @@
 import streamlit as st
 import logging
 import time
+import re
 from utils import get_openrouter_models, handle_error
 from coordinator import process_query
-import re
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
