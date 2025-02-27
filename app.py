@@ -541,7 +541,7 @@ def main():
                             st.markdown("**📊 Usage Statistics:**")
                             st.markdown(f"- Total tokens: **{usage['total_tokens']}**")
                             if usage['total_cost'] > 0:
-                                st.markdown(f"- Estimated cost: **${usage['total_cost']:.5f}**")
+                                st.markdown(f"- Estimated cost: **${usage['total_cost']:.4f}/1M tokens**")
                             else:
                                 st.markdown(f"- Estimated cost: **Free**")
                             st.markdown(f"- Processing time: **{usage['total_time']:.2f}s**")
@@ -562,7 +562,7 @@ def main():
                                     model_line += f" ({tokens.get('total', 0)} tokens"
                                     if model_data.get("cost", 0) > 0:
                                         cost = model_data['cost']
-                                        model_line += f", ${cost:.5f}"
+                                        model_line += f", ${cost:.4f}/1M"
                                     model_line += ")"
                             
                             model_list += model_line + "  \n"  # Two spaces for line break in markdown

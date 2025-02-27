@@ -249,16 +249,19 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                         prompt_cost_per_million = float(pricing.get('prompt', 0))
                         completion_cost_per_million = float(pricing.get('completion', 0))
                         
-                        # Convert to per-token costs
-                        prompt_cost_per_token = prompt_cost_per_million / 1000000
-                        completion_cost_per_token = completion_cost_per_million / 1000000
-                        
-                        # Calculate cost in dollars
-                        cost = (prompt_cost_per_token * token_usage["prompt"] + 
-                               completion_cost_per_token * token_usage["completion"])
-                        
-                        # Keep cost in absolute dollars, not per million
-                        # This change fixes the issue with cost reporting
+                        # Original approach: Store cost per million tokens for more readable values
+                        # Calculate proportional cost at per-million rate
+                        # First calculate actual token proportion of a million tokens
+                        if token_usage["total"] > 0:
+                            prompt_ratio = token_usage["prompt"] / token_usage["total"]
+                            completion_ratio = token_usage["completion"] / token_usage["total"]
+                            
+                            # Calculate weighted cost per million using the same ratios
+                            cost = (prompt_cost_per_million * prompt_ratio + 
+                                   completion_cost_per_million * completion_ratio)
+                        else:
+                            # Fallback if no tokens (shouldn't happen but just in case)
+                            cost = (prompt_cost_per_million + completion_cost_per_million) / 2
                         
                 content = result['choices'][0]['message']['content']
                 return (content, {

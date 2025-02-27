@@ -276,7 +276,7 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                     st.session_state.process_log.append(
                         f"  • {model_name} usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
                     if metadata["cost"] > 0:
-                        st.session_state.process_log.append(f"  • Estimated cost: ${metadata['cost']:.5f}")
+                        st.session_state.process_log.append(f"  • Estimated cost: ${metadata['cost']:.4f}/1M tokens")
             else:
                 # Old format fallback
                 agent_responses[model_name] = response_tuple
@@ -360,7 +360,7 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
     # Log total usage summary
     if 'process_log' in st.session_state:
         if usage_data['total_cost'] > 0:
-            cost_info = f"${usage_data['total_cost']:.5f}"
+            cost_info = f"${usage_data['total_cost']:.4f}/1M tokens"
         else:
             cost_info = "Free"
             
@@ -490,7 +490,7 @@ Important formatting notes:
                 st.session_state.process_log.append(
                     f"  • Coordinator usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
                 if coordinator_metadata["cost"] > 0:
-                    st.session_state.process_log.append(f"  • Coordinator cost: ${coordinator_metadata['cost']:.5f}")
+                    st.session_state.process_log.append(f"  • Coordinator cost: ${coordinator_metadata['cost']:.4f}/1M tokens")
         else:
             # Backward compatibility
             final_answer = response_tuple
