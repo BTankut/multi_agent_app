@@ -249,16 +249,18 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                         prompt_cost_per_million = float(pricing.get('prompt', 0))
                         completion_cost_per_million = float(pricing.get('completion', 0))
                         
-                        # Original approach: Store cost per million tokens for more readable values
-                        # Calculate proportional cost at per-million rate
-                        # First calculate actual token proportion of a million tokens
+                        # Calculate costs directly for each token type, then display per million
+                        prompt_cost = (prompt_cost_per_million / 1000000) * token_usage["prompt"]
+                        completion_cost = (completion_cost_per_million / 1000000) * token_usage["completion"]
+                        
+                        # Calculate actual cost
+                        actual_cost = prompt_cost + completion_cost
+                        
+                        # Convert to per-million for display
                         if token_usage["total"] > 0:
-                            prompt_ratio = token_usage["prompt"] / token_usage["total"]
-                            completion_ratio = token_usage["completion"] / token_usage["total"]
-                            
-                            # Calculate weighted cost per million using the same ratios
-                            cost = (prompt_cost_per_million * prompt_ratio + 
-                                   completion_cost_per_million * completion_ratio)
+                            # Display as cost per million tokens
+                            cost_per_token = actual_cost / token_usage["total"]
+                            cost = cost_per_token * 1000000
                         else:
                             # Fallback if no tokens (shouldn't happen but just in case)
                             cost = (prompt_cost_per_million + completion_cost_per_million) / 2

@@ -295,7 +295,7 @@ def main():
         )
         
         # Refresh OpenRouter models button
-        if st.button("Refresh Available Models"):
+        if st.button("Refresh Available Models", key="refresh_models_btn"):
             with st.spinner("Fetching models from OpenRouter..."):
                 st.session_state.openrouter_models = get_openrouter_models()
                 st.success(f"Found {len(st.session_state.openrouter_models)} models")
