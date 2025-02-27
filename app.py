@@ -65,6 +65,16 @@ def initialize_session_state():
     # UI state
     if 'need_rerun' not in st.session_state:
         st.session_state.need_rerun = False
+        
+    # Action tracking to prevent cross-widget interactions
+    if 'last_action' not in st.session_state:
+        st.session_state.last_action = None
+        
+    # Initialize button states
+    if 'refresh_button_clicked' not in st.session_state:
+        st.session_state.refresh_button_clicked = False
+    if 'process_button_clicked' not in st.session_state:
+        st.session_state.process_button_clicked = False
 
 def main():
     """Main function to run the Streamlit app."""
@@ -294,26 +304,36 @@ def main():
             index=0
         )
         
-        # Function to handle the refresh button click
-        def handle_refresh_click():
-            with st.spinner("Fetching models from OpenRouter..."):
-                # Get models and update state
-                st.session_state.openrouter_models = get_openrouter_models()
-                # Set a flag to show success message
-                st.session_state.show_refresh_success = True
-                
-        # Simple button with unique key and callback function
-        refresh_btn = st.button(
-            "Refresh Available Models", 
-            on_click=handle_refresh_click,
-            key="refresh_models_btn_simple"
-        )
+        # Completely different approach with a dedicated container and key
+        refresh_container = st.container()
         
-        # Show success message if needed
-        if st.session_state.get('show_refresh_success', False):
-            st.success(f"Found {len(st.session_state.openrouter_models)} models")
-            # Reset flag after showing message
-            st.session_state.show_refresh_success = False
+        # Define a specific function to ONLY refresh models
+        def refresh_models_only():
+            # Set action flag to prevent process button from activating
+            st.session_state.last_action = "refresh_models"
+            st.session_state.refresh_button_clicked = True
+            st.session_state.process_button_clicked = False
+            st.session_state.is_ready_to_process = False
+            
+        # Place button in container with specific key
+        with refresh_container:
+            refresh_btn = st.button(
+                "Refresh Available Models", 
+                on_click=refresh_models_only,
+                key="unique_refresh_models_btn"
+            )
+        
+        # Handle the refresh independently of the button click
+        if st.session_state.refresh_button_clicked and st.session_state.last_action == "refresh_models":
+            # Reset the flag immediately
+            st.session_state.refresh_button_clicked = False
+            
+            # Do the actual refresh
+            with st.spinner("Fetching models from OpenRouter..."):
+                st.session_state.openrouter_models = get_openrouter_models()
+                st.success(f"Found {len(st.session_state.openrouter_models)} models")
+        
+        # We don't need this now as we show success message in the refresh operation
         
         # Remove error log expander from sidebar
         
@@ -385,34 +405,43 @@ def main():
                 # Use a much smaller, less intrusive indicator
                 st.caption(f"Conversation continues with {msg_count} previous turns")
     
-    # Create a function to handle the process button click without side effects
-    def handle_process_click():
-        # Get the query text from the input widget via session state
+    # Create a dedicated container for process button
+    process_container = st.container()
+    
+    # Define function to ONLY set process flag
+    def process_query_only():
+        # Get the query text
         query = st.session_state.query_input
         
-        # Update the current query in session state
-        if query.strip():
+        # Only if we have something to process
+        if query and query.strip():
+            # Set action flag to prevent model refresh from happening
+            st.session_state.last_action = "process_query"
+            # Update state
             st.session_state.current_query = query
-            # Set the process flag
+            st.session_state.process_button_clicked = True
+            st.session_state.refresh_button_clicked = False
             st.session_state.is_ready_to_process = True
-            # Log the action
+            # Log
             logger.info(f"Process button clicked for query: {query[:30]}...")
-            # Clear input after successful processing
+            # Clear input immediately
             st.session_state.query_input = ""
-        else:
-            # Handle empty query condition
-            st.warning("Please enter a query in the text box first.")
-            if 'process_log' in st.session_state:
-                st.session_state.process_log.append("⚠️ Empty query - processing skipped")
     
-    # Simple process button - using a unique key to avoid conflicts
-    process_btn = st.button(
-        "Process Query",
-        on_click=handle_process_click,
-        type="primary",
-        use_container_width=True,
-        key="process_query_btn_simple"
-    )
+    # Create button in its own container
+    with process_container:
+        process_btn = st.button(
+            "Process Query",
+            on_click=process_query_only,
+            type="primary",
+            use_container_width=True,
+            key="unique_process_btn"
+        )
+    
+    # Handle empty query warnings separately
+    if process_btn and not st.session_state.query_input.strip():
+        st.warning("Please enter a query in the text box first.")
+        if 'process_log' in st.session_state:
+            st.session_state.process_log.append("⚠️ Empty query - processing skipped")
         
     # Display the current query if it exists
     if st.session_state.current_query:
@@ -429,8 +458,11 @@ def main():
         state_summary += f", Current query: {'Yes' if st.session_state.current_query else 'No'}"
         st.session_state.process_log.append(f"DEBUG STATE: {state_summary}")
     
-    # Only run processing if the ready flag is set
-    if st.session_state.is_ready_to_process and st.session_state.current_query:
+    # Only run processing if the process flag is set and we have a current query
+    # Also check that last_action is process_query to prevent accidental processing
+    if (st.session_state.is_ready_to_process and 
+        st.session_state.current_query and 
+        st.session_state.last_action == "process_query"):
         # Get the query from the session state
         query = st.session_state.current_query
         
