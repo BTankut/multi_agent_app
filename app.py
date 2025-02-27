@@ -294,20 +294,20 @@ def main():
             index=0
         )
         
-        # Use a completely different approach with form submit buttons to avoid conflicts
-        with st.form(key="refresh_models_form", clear_on_submit=False):
-            refresh_btn = st.form_submit_button(
-                "Refresh Available Models", 
-                type="secondary"
-            )
-            if refresh_btn:
-                with st.spinner("Fetching models from OpenRouter..."):
-                    # When form is submitted, do the refresh
-                    st.session_state.openrouter_models = get_openrouter_models()
-                    # Signal to show success message on next rerun
-                    st.session_state.show_refresh_success = True
-                    # Force app to refresh with current state
-                    st.rerun()
+        # Function to handle the refresh button click
+        def handle_refresh_click():
+            with st.spinner("Fetching models from OpenRouter..."):
+                # Get models and update state
+                st.session_state.openrouter_models = get_openrouter_models()
+                # Set a flag to show success message
+                st.session_state.show_refresh_success = True
+                
+        # Simple button with unique key and callback function
+        refresh_btn = st.button(
+            "Refresh Available Models", 
+            on_click=handle_refresh_click,
+            key="refresh_models_btn_simple"
+        )
         
         # Show success message if needed
         if st.session_state.get('show_refresh_success', False):
@@ -328,28 +328,25 @@ def main():
     # Main area - Input and processing
     col1, col2 = st.columns([4, 1])
     
-    # Use a form for query input to isolate it from other UI elements
+    # Simple text area for input
     with col1:
-        with st.form(key="query_input_form", clear_on_submit=True):
-            # Text area for query input
-            query_text = st.text_area(
-                "Enter your query:", 
-                height=150, 
-                key="query_text_area"
-            )
+        # Override previous input value if stored
+        if 'query_input' not in st.session_state:
+            st.session_state.query_input = ""
             
-            # Submit button for the query
-            submit_query = st.form_submit_button("Submit Query")
-            
-            # Process the form submission
-            if submit_query and query_text.strip():
-                # Store the user's query
-                st.session_state.current_query = query_text
-                # Set processing flag to FALSE - require explicit processing
-                st.session_state.is_ready_to_process = False
-                # Log what we're doing
-                if 'process_log' in st.session_state:
-                    st.session_state.process_log.append(f"Query submitted: {query_text[:50]}...")
+        # Function to handle changes
+        def on_text_change():
+            if st.session_state.query_input.strip():
+                # Just save the entered text, don't trigger any processing
+                st.session_state.current_query = st.session_state.query_input
+                
+        # Simple text area
+        st.text_area(
+            "Enter your query:", 
+            height=150, 
+            key="query_input",
+            on_change=on_text_change
+        )
     
     with col2:
         # Reset button to clear current query results and conversation history
@@ -388,31 +385,34 @@ def main():
                 # Use a much smaller, less intrusive indicator
                 st.caption(f"Conversation continues with {msg_count} previous turns")
     
-    # Process button - placed in a form to isolate it from other widgets
-    with st.form(key="process_query_form", clear_on_submit=False):
-        # Create the button in the form
-        process_btn = st.form_submit_button(
-            "Process Query", 
-            type="primary",
-            use_container_width=True
-        )
+    # Create a function to handle the process button click without side effects
+    def handle_process_click():
+        # Get the query text from the input widget via session state
+        query = st.session_state.query_input
         
-        # Form submit handlers execute only when the form is submitted
-        if process_btn:
-            # Only proceed if we have a query to process
-            if st.session_state.current_query:
-                # Set processing flag
-                st.session_state.is_ready_to_process = True
-                # Log the action
-                logger.info(f"Process button clicked for query: {st.session_state.current_query[:30]}...")
-                # Show notification and rerun
-                with st.spinner("Processing your query..."):
-                    st.rerun()
-            else:
-                # Handle empty query condition
-                st.warning("Please enter a query in the text box and press Enter first.")
-                if 'process_log' in st.session_state:
-                    st.session_state.process_log.append("⚠️ Empty query - processing skipped")
+        # Update the current query in session state
+        if query.strip():
+            st.session_state.current_query = query
+            # Set the process flag
+            st.session_state.is_ready_to_process = True
+            # Log the action
+            logger.info(f"Process button clicked for query: {query[:30]}...")
+            # Clear input after successful processing
+            st.session_state.query_input = ""
+        else:
+            # Handle empty query condition
+            st.warning("Please enter a query in the text box first.")
+            if 'process_log' in st.session_state:
+                st.session_state.process_log.append("⚠️ Empty query - processing skipped")
+    
+    # Simple process button - using a unique key to avoid conflicts
+    process_btn = st.button(
+        "Process Query",
+        on_click=handle_process_click,
+        type="primary",
+        use_container_width=True,
+        key="process_query_btn_simple"
+    )
         
     # Display the current query if it exists
     if st.session_state.current_query:
