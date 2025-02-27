@@ -245,17 +245,20 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                     
                     # Calculate cost if pricing information is available
                     if pricing:
-                        # Get per-token costs (convert from per-million token costs)
-                        prompt_cost_per_token = float(pricing.get('prompt', 0))
-                        completion_cost_per_token = float(pricing.get('completion', 0))
+                        # Get per-million token costs
+                        prompt_cost_per_million = float(pricing.get('prompt', 0))
+                        completion_cost_per_million = float(pricing.get('completion', 0))
+                        
+                        # Convert to per-token costs
+                        prompt_cost_per_token = prompt_cost_per_million / 1000000
+                        completion_cost_per_token = completion_cost_per_million / 1000000
                         
                         # Calculate cost in dollars
                         cost = (prompt_cost_per_token * token_usage["prompt"] + 
                                completion_cost_per_token * token_usage["completion"])
                         
-                        # Convert to dollars per million tokens for display
-                        if token_usage["total"] > 0:
-                            cost = (cost / token_usage["total"]) * 1000000
+                        # Keep cost in absolute dollars, not per million
+                        # This change fixes the issue with cost reporting
                         
                 content = result['choices'][0]['message']['content']
                 return (content, {
