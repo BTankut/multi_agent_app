@@ -294,21 +294,26 @@ def main():
             index=0
         )
         
-        # Refresh OpenRouter models button - use a session state variable to prevent cross-activation
-        if 'refresh_models_clicked' not in st.session_state:
-            st.session_state.refresh_models_clicked = False
-            
-        def handle_refresh_models():
-            st.session_state.refresh_models_clicked = True
-            st.session_state.is_ready_to_process = False  # Ensure processing isn't triggered
-            
-        refresh_btn = st.button("Refresh Available Models", key="refresh_models_btn", on_click=handle_refresh_models)
+        # Use a completely different approach with form submit buttons to avoid conflicts
+        with st.form(key="refresh_models_form", clear_on_submit=False):
+            refresh_btn = st.form_submit_button(
+                "Refresh Available Models", 
+                type="secondary"
+            )
+            if refresh_btn:
+                with st.spinner("Fetching models from OpenRouter..."):
+                    # When form is submitted, do the refresh
+                    st.session_state.openrouter_models = get_openrouter_models()
+                    # Signal to show success message on next rerun
+                    st.session_state.show_refresh_success = True
+                    # Force app to refresh with current state
+                    st.rerun()
         
-        if st.session_state.refresh_models_clicked:
-            with st.spinner("Fetching models from OpenRouter..."):
-                st.session_state.openrouter_models = get_openrouter_models()
-                st.success(f"Found {len(st.session_state.openrouter_models)} models")
-                st.session_state.refresh_models_clicked = False  # Reset for next click
+        # Show success message if needed
+        if st.session_state.get('show_refresh_success', False):
+            st.success(f"Found {len(st.session_state.openrouter_models)} models")
+            # Reset flag after showing message
+            st.session_state.show_refresh_success = False
         
         # Remove error log expander from sidebar
         
@@ -323,31 +328,28 @@ def main():
     # Main area - Input and processing
     col1, col2 = st.columns([4, 1])
     
-    # Create callback for query submission
-    def submit_query():
-        # Store the query from the text_area
-        if st.session_state.query_input.strip():
-            # Store the user's query
-            st.session_state.current_query = st.session_state.query_input
-            # Clear the input field
-            st.session_state.query_input = ""
-            # Reset button states to avoid conflicts
-            st.session_state.refresh_models_clicked = False
-            st.session_state.process_btn_clicked = False
-            # Set this flag to FALSE on initial submit - require explicit processing
-            st.session_state.is_ready_to_process = False
-            # Log what we're doing
-            if 'process_log' in st.session_state:
-                st.session_state.process_log.append(f"Query submitted: {st.session_state.current_query[:50]}...")
-    
-    # Text area with on_change callback
+    # Use a form for query input to isolate it from other UI elements
     with col1:
-        st.text_area(
-            "Enter your query:", 
-            height=150, 
-            key="query_input", 
-            on_change=submit_query
-        )
+        with st.form(key="query_input_form", clear_on_submit=True):
+            # Text area for query input
+            query_text = st.text_area(
+                "Enter your query:", 
+                height=150, 
+                key="query_text_area"
+            )
+            
+            # Submit button for the query
+            submit_query = st.form_submit_button("Submit Query")
+            
+            # Process the form submission
+            if submit_query and query_text.strip():
+                # Store the user's query
+                st.session_state.current_query = query_text
+                # Set processing flag to FALSE - require explicit processing
+                st.session_state.is_ready_to_process = False
+                # Log what we're doing
+                if 'process_log' in st.session_state:
+                    st.session_state.process_log.append(f"Query submitted: {query_text[:50]}...")
     
     with col2:
         # Reset button to clear current query results and conversation history
@@ -386,38 +388,31 @@ def main():
                 # Use a much smaller, less intrusive indicator
                 st.caption(f"Conversation continues with {msg_count} previous turns")
     
-    # Process button - placed in the sidebar for simplicity
-    # Use session state to track button clicks with callback
-    if 'process_btn_clicked' not in st.session_state:
-        st.session_state.process_btn_clicked = False
+    # Process button - placed in a form to isolate it from other widgets
+    with st.form(key="process_query_form", clear_on_submit=False):
+        # Create the button in the form
+        process_btn = st.form_submit_button(
+            "Process Query", 
+            type="primary",
+            use_container_width=True
+        )
         
-    def handle_process_click():
-        # This function will be called when the button is clicked
-        st.session_state.process_btn_clicked = True
-        st.session_state.refresh_models_clicked = False  # Ensure they don't conflict
-        
-        # Only proceed if we have a query to process
-        if st.session_state.current_query:
-            st.session_state.is_ready_to_process = True
-            # Log the action
-            logger.info(f"Process button clicked for query: {st.session_state.current_query[:30]}...")
-        else:
-            # Handle empty query condition
-            st.warning("Please enter a query in the text box and press Enter first.")
-            if 'process_log' in st.session_state:
-                st.session_state.process_log.append("⚠️ Empty query - processing skipped")
-    
-    # Create the button with callback
-    process_btn = st.button("Process Query", type="primary", use_container_width=True, key="process_btn", on_click=handle_process_click)
-    
-    # Handle the processing in the session state cycle
-    if st.session_state.process_btn_clicked and st.session_state.is_ready_to_process:
-        # Reset the button state
-        st.session_state.process_btn_clicked = False
-        
-        # Show progress and trigger rerun to start processing
-        with st.spinner("Processing your query..."):
-            st.rerun()  # Rerun to start processing
+        # Form submit handlers execute only when the form is submitted
+        if process_btn:
+            # Only proceed if we have a query to process
+            if st.session_state.current_query:
+                # Set processing flag
+                st.session_state.is_ready_to_process = True
+                # Log the action
+                logger.info(f"Process button clicked for query: {st.session_state.current_query[:30]}...")
+                # Show notification and rerun
+                with st.spinner("Processing your query..."):
+                    st.rerun()
+            else:
+                # Handle empty query condition
+                st.warning("Please enter a query in the text box and press Enter first.")
+                if 'process_log' in st.session_state:
+                    st.session_state.process_log.append("⚠️ Empty query - processing skipped")
         
     # Display the current query if it exists
     if st.session_state.current_query:
