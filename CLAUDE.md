@@ -28,6 +28,11 @@ Multi_Agent System is an AI orchestration platform that intelligently routes use
 - **Automatic Model Updates**: One-click updates for model data from OpenRouter API
 - **Detailed Process Log**: Transparent view of all system operations
 - **Process Visualization**: Progress tracking and detailed agent information
+- **Conversation History**: Maintains context between queries for coherent multi-turn interactions
+- **Robust UI Design**: Isolated form processing and automatic query clearing for better UX
+- **Response Metadata**: Detailed information about tokens, processing time, and costs
+- **LaTeX Formula Handling**: Sanitization for improved formula display in responses
+- **Intelligent Error Recovery**: Detailed error analysis and user-friendly error messages
 
 ## Technical Architecture
 
@@ -88,13 +93,17 @@ multi_agent_app/
 - All core functionality working correctly
 - API integration complete with OpenRouter with provider diversity
 - Error handling improved with enhanced retry logic and exponential backoff
-- UI refined with model update capabilities
+- UI refined with model update capabilities and improved user experience
 - Provider diversity implemented to prevent rate limiting
 - Automatic model labels and roles updating system
 - Conversation history preservation for maintaining context
 - Automatic backup management with file rotation (5 most recent per type)
 - LaTeX sanitization for improved math formula display
 - Enhanced error detection and user-friendly error messages
+- Forms with automatic clearing for improved UX and cleaner interface
+- Simplified UI structure with responsive layout and progress indicators
+- Recent coordinator model tracking for quick selection of frequently used models
+- Detailed conversation history with metadata and usage statistics
 
 ## Development Notes
 
@@ -124,6 +133,11 @@ multi_agent_app/
 - Launch web app: `streamlit run app.py`
 - Test API connectivity: `python api_test.py`
 - Check model ID formats: `python model_id_check.py`
+- Run automatic compatibility testing: `python auto_test.py`
+- Debug model responses: Check the 'Conversation History' and 'Agent Responses' expanders
+- Inspect API calls and model selection: See 'Process Log' in the UI for detailed traces
+- Track token usage: View the agent information panel for token counts and costs
+- Debug UI issues: Check Streamlit logs with `streamlit run app.py --log_level=debug`
 
 ### Common Issues
 
@@ -131,19 +145,29 @@ multi_agent_app/
 - Some models may return 'choices'/'user_id' errors from OpenRouter
 - Coordinator model should be excluded from agent selection
 - Model ID formats must match OpenRouter's format (provider/model-name)
+- Rate limiting may occur with multiple concurrent requests to the same provider
+- Some models have context length limitations that can affect long conversations
+- Error handling may need adjustment for specific API provider error formats
+- Streamlit session state requires careful management to prevent UI conflicts
+- Conversation history can grow large and impact performance with extended use
 
 ## Future Improvements
 
-- Implement cost estimation and monitoring
+- Implement cost estimation and monitoring with budget controls
 - Enhance query analysis for better label extraction
-- Add multimodal support for images
-- Improve visualization of coordinator-agent interactions
+- Add multimodal support for images and file uploads
+- Improve visualization of coordinator-agent interactions with interactive diagrams
 - Resolve remaining OpenRouter API issues with 'choices' not found errors
-- Enhance automatic labeling for new models
-- Create more comprehensive model compatibility tests
-- Implement user preference settings persistence
-- Add model response caching for similar queries
-- Enhance analytics for query patterns and model performance
+- Enhance automatic labeling for new models with more granular capability detection
+- Create more comprehensive model compatibility tests and automatic compatibility checks
+- Implement user preference settings persistence for coordinator model and options
+- Add model response caching for similar queries to reduce API costs
+- Enhance analytics for query patterns and model performance metrics
+- Implement pagination for conversation history with filtering options
+- Add export functionality for conversation history in markdown and JSON formats
+- Support for local model APIs alongside OpenRouter for hybrid operations
+- Implement role-based access control for team usage
+- Add theme customization and dark mode support
 
 ## Terminal Commands
 

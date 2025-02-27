@@ -37,6 +37,8 @@ def initialize_session_state():
         st.session_state.conversation_history = []
     if 'recent_coordinator_models' not in st.session_state:
         st.session_state.recent_coordinator_models = []
+    if 'form_was_submitted' not in st.session_state:
+        st.session_state.form_was_submitted = False
         
     # Processing state - ESSENTIAL for query handling
     if 'is_ready_to_process' not in st.session_state:
@@ -365,7 +367,7 @@ def main():
                 st.caption(f"Conversation continues with {msg_count} previous turns")
     
     # Use a form to completely isolate the query processing from any other UI elements
-    with st.form(key="query_form"):
+    with st.form(key="query_form", clear_on_submit=True):
         # Form title
         st.write("**Enter Your Query Below**")
         
@@ -416,8 +418,7 @@ def main():
         query = st.session_state.current_query
         
         # Immediately clear the ready flag to prevent reprocessing
-        st.session_state.is_ready_to_process = False
-        
+        st.session_state.is_ready_to_process = False        
         # Log that we're starting processing
         logger.info(f"Beginning processing for query: {query[:50]}")
         if 'process_log' in st.session_state:
