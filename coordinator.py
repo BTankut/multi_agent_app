@@ -30,12 +30,24 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
         context = "\n\nPrevious conversation context:\n"
         
         # Limit to last 5 conversation turns (10 messages) to avoid context length issues
-        relevant_history = coordinator_history[-10:] if len(coordinator_history) > 10 else coordinator_history
+        # Only include user and assistant messages in history (not system messages)
+        relevant_history = [msg for msg in coordinator_history if msg["role"] in ["user", "assistant"]]
+        # Limit to last 5 conversation turns for clarity and context length
+        relevant_history = relevant_history[-10:] if len(relevant_history) > 10 else relevant_history
         
         for message in relevant_history:
             role = message["role"]
             content = message["content"]
-            context += f"{role.capitalize()}: {content}\n"
+            # Improve formatting for better context
+            if role == "user":
+                context += f"User Question: {content}\n\n"
+            else:
+                if "Response:" in content:
+                    # Extract just the response part if it's in our format
+                    response_part = content.split("Response:", 1)[1].strip()
+                    context += f"Previous Answer: {response_part}\n\n"
+                else:
+                    context += f"Previous Answer: {content}\n\n"
         
         # Log what we're doing
         logger.info(f"Using {len(relevant_history)} messages as context for label determination")
@@ -64,7 +76,9 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
         """
     
     # Ask the coordinator model to analyze the query
-    response_tuple = call_agent(coordinator_model, "You are a helpful assistant.", prompt, openrouter_models)
+    # Use the conversation history for the coordinator if available
+    response_tuple = call_agent(coordinator_model, "You are a helpful assistant.", prompt, openrouter_models, 
+                               conversation_history=coordinator_history)
     
     # Handle the new tuple return format from call_agent
     response = None
@@ -563,14 +577,16 @@ def process_query(query, coordinator_model, option, openrouter_models, coordinat
         logger.info(f"Starting with existing history: {len(coordinator_history)} messages")
     
     # Now add the new interaction to the history
+    # First add the query as user message
     updated_histories['coordinator'].append({
         "role": "user", 
         "content": query
     })
     
+    # Then add the assistant response - but simplified format to make it clearer for the model
     updated_histories['coordinator'].append({
         "role": "assistant", 
-        "content": f"Labels: {', '.join(labels)}\nResponse: {final_answer}"
+        "content": final_answer
     })
     
     # Log what we did

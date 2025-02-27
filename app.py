@@ -304,24 +304,11 @@ def main():
             index=0
         )
         
-        # Create a COMPLETELY SEPARATE tab just for model refresh
-        # This physically separates the refresh functionality from the rest of the UI
-        model_tab, settings_tab = st.tabs(["Available Models", "Refresh Models"])
-        
-        with model_tab:
-            # Show model info in the first tab
-            if st.session_state.openrouter_models:
-                st.text(f"Found {len(st.session_state.openrouter_models)} models")
-                for model in st.session_state.openrouter_models[:10]:  # Show first 10 models
-                    st.write(f"- {model.get('id', 'Unknown model')}")
-                if len(st.session_state.openrouter_models) > 10:
-                    st.write(f"... and {len(st.session_state.openrouter_models) - 10} more")
-        
-        with settings_tab:
-            # Show refresh button in a completely separate tab
+        # Simple dropdown for model refresh
+        with st.expander("Refresh Models", expanded=False):
             st.write("Click the button below to refresh models from OpenRouter API")
             
-            if st.button("Refresh Models from API", key="refresh_in_tab"):
+            if st.button("Refresh Models from API", key="refresh_models_btn"):
                 with st.spinner("Fetching models from OpenRouter..."):
                     # Do the refresh
                     st.session_state.openrouter_models = get_openrouter_models()
