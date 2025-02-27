@@ -304,69 +304,41 @@ def main():
             index=0
         )
         
-        # Completely different approach with a dedicated container and key
-        refresh_container = st.container()
+        # Create a COMPLETELY SEPARATE tab just for model refresh
+        # This physically separates the refresh functionality from the rest of the UI
+        model_tab, settings_tab = st.tabs(["Available Models", "Refresh Models"])
         
-        # Define a specific function to ONLY refresh models
-        def refresh_models_only():
-            # Set action flag to prevent process button from activating
-            st.session_state.last_action = "refresh_models"
-            st.session_state.refresh_button_clicked = True
-            st.session_state.process_button_clicked = False
-            st.session_state.is_ready_to_process = False
-            
-        # Place button in container with specific key
-        with refresh_container:
-            refresh_btn = st.button(
-                "Refresh Available Models", 
-                on_click=refresh_models_only,
-                key="unique_refresh_models_btn"
-            )
+        with model_tab:
+            # Show model info in the first tab
+            if st.session_state.openrouter_models:
+                st.text(f"Found {len(st.session_state.openrouter_models)} models")
+                for model in st.session_state.openrouter_models[:10]:  # Show first 10 models
+                    st.write(f"- {model.get('id', 'Unknown model')}")
+                if len(st.session_state.openrouter_models) > 10:
+                    st.write(f"... and {len(st.session_state.openrouter_models) - 10} more")
         
-        # Handle the refresh independently of the button click
-        if st.session_state.refresh_button_clicked and st.session_state.last_action == "refresh_models":
-            # Reset the flag immediately
-            st.session_state.refresh_button_clicked = False
+        with settings_tab:
+            # Show refresh button in a completely separate tab
+            st.write("Click the button below to refresh models from OpenRouter API")
             
-            # Do the actual refresh
-            with st.spinner("Fetching models from OpenRouter..."):
-                st.session_state.openrouter_models = get_openrouter_models()
-                st.success(f"Found {len(st.session_state.openrouter_models)} models")
+            if st.button("Refresh Models from API", key="refresh_in_tab"):
+                with st.spinner("Fetching models from OpenRouter..."):
+                    # Do the refresh
+                    st.session_state.openrouter_models = get_openrouter_models()
+                    # Show success message
+                    st.success(f"Successfully retrieved {len(st.session_state.openrouter_models)} models")
         
         # We don't need this now as we show success message in the refresh operation
         
         # Remove error log expander from sidebar
         
-        # Show model info
-        if st.session_state.openrouter_models:
-            with st.expander("Available Models", expanded=False):
-                for model in st.session_state.openrouter_models[:10]:  # Show first 10 models
-                    st.write(f"- {model.get('id', 'Unknown model')}")
-                if len(st.session_state.openrouter_models) > 10:
-                    st.write(f"... and {len(st.session_state.openrouter_models) - 10} more")
+        # We moved the model list display to the tab above
     
     # Main area - Input and processing
     col1, col2 = st.columns([4, 1])
     
-    # Simple text area for input
-    with col1:
-        # Override previous input value if stored
-        if 'query_input' not in st.session_state:
-            st.session_state.query_input = ""
-            
-        # Function to handle changes
-        def on_text_change():
-            if st.session_state.query_input.strip():
-                # Just save the entered text, don't trigger any processing
-                st.session_state.current_query = st.session_state.query_input
-                
-        # Simple text area
-        st.text_area(
-            "Enter your query:", 
-            height=150, 
-            key="query_input",
-            on_change=on_text_change
-        )
+    # We're using a form instead of direct text input now
+    # This gives us better isolation between UI elements
     
     with col2:
         # Reset button to clear current query results and conversation history
@@ -405,43 +377,35 @@ def main():
                 # Use a much smaller, less intrusive indicator
                 st.caption(f"Conversation continues with {msg_count} previous turns")
     
-    # Create a dedicated container for process button
-    process_container = st.container()
-    
-    # Define function to ONLY set process flag
-    def process_query_only():
-        # Get the query text
-        query = st.session_state.query_input
+    # Use a form to completely isolate the query processing from any other UI elements
+    with st.form(key="query_form"):
+        # Form title
+        st.write("**Enter Your Query Below**")
         
-        # Only if we have something to process
-        if query and query.strip():
-            # Set action flag to prevent model refresh from happening
-            st.session_state.last_action = "process_query"
-            # Update state
-            st.session_state.current_query = query
-            st.session_state.process_button_clicked = True
-            st.session_state.refresh_button_clicked = False
-            st.session_state.is_ready_to_process = True
-            # Log
-            logger.info(f"Process button clicked for query: {query[:30]}...")
-            # Clear input immediately
-            st.session_state.query_input = ""
-    
-    # Create button in its own container
-    with process_container:
-        process_btn = st.button(
-            "Process Query",
-            on_click=process_query_only,
-            type="primary",
-            use_container_width=True,
-            key="unique_process_btn"
+        # Query input field
+        query_input = st.text_area(
+            "Enter your query:", 
+            height=150,
+            key="query_form_input"
         )
-    
-    # Handle empty query warnings separately
-    if process_btn and not st.session_state.query_input.strip():
-        st.warning("Please enter a query in the text box first.")
-        if 'process_log' in st.session_state:
-            st.session_state.process_log.append("⚠️ Empty query - processing skipped")
+        
+        # Submit button
+        submit_query = st.form_submit_button("Process Query", type="primary")
+        
+        # Handle form submission - this is isolated from all other UI elements
+        if submit_query:
+            if query_input.strip():
+                # Set up for processing
+                st.session_state.current_query = query_input
+                st.session_state.last_action = "process_query"
+                st.session_state.is_ready_to_process = True
+                # Log
+                logger.info(f"Process button clicked for query: {query_input[:30]}...")
+            else:
+                # Handle empty query
+                st.warning("Please enter a query in the text box.")
+                if 'process_log' in st.session_state:
+                    st.session_state.process_log.append("⚠️ Empty query - processing skipped")
         
     # Display the current query if it exists
     if st.session_state.current_query:
@@ -459,10 +423,8 @@ def main():
         st.session_state.process_log.append(f"DEBUG STATE: {state_summary}")
     
     # Only run processing if the process flag is set and we have a current query
-    # Also check that last_action is process_query to prevent accidental processing
-    if (st.session_state.is_ready_to_process and 
-        st.session_state.current_query and 
-        st.session_state.last_action == "process_query"):
+    # This is now safer because we're using forms for complete isolation
+    if st.session_state.is_ready_to_process and st.session_state.current_query:
         # Get the query from the session state
         query = st.session_state.current_query
         
