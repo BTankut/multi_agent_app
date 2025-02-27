@@ -162,8 +162,6 @@ def main():
                     # Her iki güncelleme de başarılı mıydı?
                     if labels_result.returncode == 0 and roles_result.returncode == 0:
                         # Model bilgilerini çıkart
-                        import re
-                        
                         # Etiket güncelleme bilgileri
                         # Debug çıktısını görüntüle
                         logger.info(f"Labels output: {labels_result.stdout}")
