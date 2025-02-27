@@ -91,6 +91,10 @@ multi_agent_app/
 - UI refined with model update capabilities
 - Provider diversity implemented to prevent rate limiting
 - Automatic model labels and roles updating system
+- Conversation history preservation for maintaining context
+- Automatic backup management with file rotation (5 most recent per type)
+- LaTeX sanitization for improved math formula display
+- Enhanced error detection and user-friendly error messages
 
 ## Development Notes
 
@@ -130,7 +134,6 @@ multi_agent_app/
 
 ## Future Improvements
 
-- Add conversation history support for context retention
 - Implement cost estimation and monitoring
 - Enhance query analysis for better label extraction
 - Add multimodal support for images
@@ -138,6 +141,9 @@ multi_agent_app/
 - Resolve remaining OpenRouter API issues with 'choices' not found errors
 - Enhance automatic labeling for new models
 - Create more comprehensive model compatibility tests
+- Implement user preference settings persistence
+- Add model response caching for similar queries
+- Enhance analytics for query patterns and model performance
 
 ## Terminal Commands
 

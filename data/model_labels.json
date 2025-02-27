@@ -1385,10 +1385,10 @@
   {
     "model": "sao10k/fimbulvetr-11b-v2",
     "labels": [
-      "general_assistant",
+      "paid",
       "math_expert",
-      "reasoning_expert",
-      "paid"
+      "general_assistant",
+      "reasoning_expert"
     ]
   },
   {

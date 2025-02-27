@@ -46,7 +46,7 @@ def save_json(file_path, data):
         return False
 
 def backup_file(file_path):
-    """Bir dosyanın zaman damgalı yedeğini oluşturur"""
+    """Bir dosyanın zaman damgalı yedeğini oluşturur ve eski yedekleri temizler"""
     ensure_backup_dir()
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     filename = os.path.basename(file_path)
@@ -57,11 +57,37 @@ def backup_file(file_path):
         if data:
             save_json(backup_path, data)
             logger.info(f"Yedek oluşturuldu: {backup_path}")
+            
+            # Eski yedekleri temizle - her dosya türü için en son 5 yedek dışındakileri sil
+            clean_old_backups(filename)
             return True
     except Exception as e:
         logger.error(f"Yedekleme sırasında hata: {e}")
     
     return False
+
+def clean_old_backups(filename_prefix):
+    """Belirli bir türdeki eski yedekleri temizler, sadece en son 5 tanesini tutar"""
+    try:
+        # İlgili dosya yedeklerini bul
+        backup_files = []
+        for file in os.listdir(BACKUP_DIR):
+            if file.startswith(filename_prefix) and file.endswith(".bak"):
+                file_path = os.path.join(BACKUP_DIR, file)
+                backup_files.append((file_path, os.path.getmtime(file_path)))
+        
+        # Son değişiklik zamanına göre sırala (en yeni en sonda)
+        backup_files.sort(key=lambda x: x[1])
+        
+        # En son 5 yedek dışındakileri sil
+        if len(backup_files) > 5:
+            for file_path, _ in backup_files[:-5]:  # En eski dosyaları sil
+                os.remove(file_path)
+                logger.info(f"Eski yedek temizlendi: {file_path}")
+            
+            logger.info(f"{len(backup_files)-5} eski yedek temizlendi, {min(5, len(backup_files))} yedek tutuldu")
+    except Exception as e:
+        logger.error(f"Eski yedekler temizlenirken hata: {e}")
 
 def get_all_labels_from_model_labels():
     """model_labels.json'dan kullanılan tüm benzersiz etiketleri çeker"""
@@ -83,11 +109,8 @@ def update_model_roles():
     """
     # Mevcut dosyaları yedekle
     if not backup_file(MODEL_ROLES_FILE):
-        logger.warning("Yedekleme yapılamadı, devam etmek istiyor musunuz? (y/n)")
-        response = input().lower()
-        if response != 'y':
-            logger.info("Güncelleme işlemi iptal edildi")
-            return False
+        # Web arayüzünde çalıştığında input sorun yaratabilir, bu yüzden yedekleme hatası olsa bile devam et
+        logger.warning("Yedekleme yapılamadı, devam ediliyor...")
     
     # Veri kaynaklarını yükle
     model_roles_data = load_json(MODEL_ROLES_FILE)
