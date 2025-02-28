@@ -2,12 +2,18 @@ import streamlit as st
 import logging
 import time
 import re
+import json
+import os
+from datetime import datetime
 from utils import get_openrouter_models, handle_error
 from coordinator import process_query
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Define file path for persistent coordinator model history
+COORDINATOR_HISTORY_FILE = "data/coordinator_history.json"
 
 # Pastel colors for UI elements
 PASTEL_BLUE = "#E6F0FA"
@@ -28,6 +34,39 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
+def load_coordinator_history():
+    """Load saved coordinator model history from file"""
+    if os.path.exists(COORDINATOR_HISTORY_FILE):
+        try:
+            with open(COORDINATOR_HISTORY_FILE, 'r') as f:
+                data = json.load(f)
+                return data.get('models', [])
+        except Exception as e:
+            logger.error(f"Error loading coordinator history: {e}")
+    return []
+
+def save_coordinator_history(models):
+    """Save coordinator model history to file"""
+    try:
+        # Ensure data directory exists
+        os.makedirs(os.path.dirname(COORDINATOR_HISTORY_FILE), exist_ok=True)
+        
+        # Create data object with timestamp
+        data = {
+            'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'models': models
+        }
+        
+        # Write to file
+        with open(COORDINATOR_HISTORY_FILE, 'w') as f:
+            json.dump(data, f, indent=2)
+            
+        logger.info(f"Coordinator history saved with {len(models)} models")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving coordinator history: {e}")
+        return False
+
 def initialize_session_state():
     """Initialize session state variables if they don't exist."""
     # Models and general app state
@@ -36,7 +75,9 @@ def initialize_session_state():
     if 'conversation_history' not in st.session_state:
         st.session_state.conversation_history = []
     if 'recent_coordinator_models' not in st.session_state:
-        st.session_state.recent_coordinator_models = []
+        # Load from file if available
+        saved_models = load_coordinator_history()
+        st.session_state.recent_coordinator_models = saved_models if saved_models else []
     if 'form_was_submitted' not in st.session_state:
         st.session_state.form_was_submitted = False
         
@@ -298,6 +339,9 @@ def main():
             if coordinator_model in st.session_state.recent_coordinator_models:
                 st.session_state.recent_coordinator_models.remove(coordinator_model)
             st.session_state.recent_coordinator_models.append(coordinator_model)
+            
+            # Save updated list to file
+            save_coordinator_history(st.session_state.recent_coordinator_models)
         
         # Option selection (free, paid, optimized)
         option = st.radio(
