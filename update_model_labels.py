@@ -174,12 +174,12 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
     model_name = model_info.get('name', '').lower()
     
     # Code/Coding uzmanı modelleri
-    if any(term in model_id_lower or term in model_name for term in ["code", "coding", "coder", "codestral", "phi-3"]):
+    if any(term in model_id_lower or term in model_name for term in ["code", "coding", "coder", "codestral", "phi-3", "o3"]) or "claude" in model_id_lower:
         if "code_expert" in available_labels:
             labels.append("code_expert")
     
     # Matematik uzmanı modelleri
-    if any(term in model_id_lower or term in model_name for term in ["math", "numeric", "gemini", "gpt-4", "claude-3", "o1", "mixtral"]):
+    if any(term in model_id_lower or term in model_name for term in ["math", "numeric", "gemini", "gpt-4", "claude", "o1", "mixtral", "o3"]):
         if "math_expert" in available_labels:
             labels.append("math_expert")
     
