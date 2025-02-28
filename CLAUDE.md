@@ -192,3 +192,11 @@ multi_agent_app/
 - Create new branch: `git checkout -b feature/new-feature`
 - Commit changes: `git add . && git commit -m "Description of changes"`
 - Push changes: `git push origin branch-name`
+
+## Development Workflow Rules
+
+- **Commit and Push**: After every commit, immediately push to remote to keep the repository in sync
+- **Local/Remote Sync**: Local and remote repositories should always be at the same commit
+- **Backup Rotation**: Maintain only 5 most recent backups per file type to prevent clutter
+- **Model Labeling**: Ensure specialized models (Claude, O3, etc.) are properly tagged with appropriate capabilities
+- **UI Updates**: Test all UI changes in both desktop and mobile views before committing
