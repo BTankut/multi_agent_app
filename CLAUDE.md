@@ -87,7 +87,7 @@ multi_agent_app/
    - Synchronizes model roles with available labels
    - Maintains backup of configuration files
 
-## Current Status (as of 2025-02-27)
+## Current Status (as of 2025-02-28)
 
 - Successfully implemented both CLI and Streamlit web interfaces
 - All core functionality working correctly
@@ -104,6 +104,10 @@ multi_agent_app/
 - Simplified UI structure with responsive layout and progress indicators
 - Recent coordinator model tracking for quick selection of frequently used models
 - Detailed conversation history with metadata and usage statistics
+- Improved formatting for costs with proper Turkish currency format (comma as decimal separator)
+- Fixed query text display to properly wrap long texts in UI
+- Enhanced model information display with consistent typography and formatting
+- Accurate cost representation without rounding issues
 
 ## Development Notes
 
@@ -153,7 +157,7 @@ multi_agent_app/
 
 ## Future Improvements
 
-- Implement cost estimation and monitoring with budget controls
+- Implement budget controls with spending limits and alerts
 - Enhance query analysis for better label extraction
 - Add multimodal support for images and file uploads
 - Improve visualization of coordinator-agent interactions with interactive diagrams
@@ -168,6 +172,8 @@ multi_agent_app/
 - Support for local model APIs alongside OpenRouter for hybrid operations
 - Implement role-based access control for team usage
 - Add theme customization and dark mode support
+- Add internationalization support with multiple languages for UI
+- Implement additional layout options for different screen sizes and devices
 
 ## Terminal Commands
 

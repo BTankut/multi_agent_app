@@ -260,7 +260,11 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                         if token_usage["total"] > 0:
                             # Display as cost per million tokens
                             cost_per_token = actual_cost / token_usage["total"]
+                            # Ölçeği artıralım ki çok küçük değerler 0.00 olarak görünmesin
                             cost = cost_per_token * 1000000
+                            # Yuvarlama yapmadan tam değeri kullan, sadece çok küçük değerler için alt sınır koy
+                            if 0 < cost < 0.000001:
+                                cost = 0.000001
                         else:
                             # Fallback if no tokens (shouldn't happen but just in case)
                             cost = (prompt_cost_per_million + completion_cost_per_million) / 2

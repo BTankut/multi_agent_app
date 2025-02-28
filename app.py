@@ -401,7 +401,11 @@ def main():
         current_query_container = st.container()
         with current_query_container:
             st.markdown("**Current Query:**")
-            st.markdown(f"```\n{st.session_state.current_query}\n```")
+            st.markdown(f"""<div style="white-space: pre-wrap; word-wrap: break-word; overflow-wrap: break-word;">
+```
+{st.session_state.current_query}
+```
+</div>""", unsafe_allow_html=True)
             st.markdown("---")
         
     # THE MAIN PROCESSING LOGIC - completely rewritten for reliability
@@ -534,32 +538,38 @@ def main():
                             st.markdown("**📊 Usage Statistics:**")
                             st.markdown(f"- Total tokens: **{usage['total_tokens']}**")
                             if usage['total_cost'] > 0:
-                                st.markdown(f"- Estimated cost: **${usage['total_cost']:.4f}/1M tokens**")
+                                # Türkçe formatta virgül kullanarak göster (ondalık için virgül)
+                                # En fazla 6 ondalık basamak gösterelim
+                                # Ancak sonda gereksiz 0'lar olmasın
+                                cost_str = f"{usage['total_cost']:.6f}".rstrip('0').rstrip('.').replace(".", ",")
+                                st.markdown(f"- Estimated cost: **${cost_str}/1M tokens**")
                             else:
                                 st.markdown(f"- Estimated cost: **Free**")
                             st.markdown(f"- Processing time: **{usage['total_time']:.2f}s**")
                         
-                        # Simpler model display to avoid potential formatting issues
-                        st.markdown("**Models:**")
-                        # Display all unique models in a single list with usage if available
-                        model_list = ""
+                        # Model bilgilerini daha tutarlı bir şekilde gösterelim
+                        st.markdown("**🤖 Models:**")
+                        
+                        # Her bir model için ayrı ayrı markdown satırları oluşturalım
                         for model in unique_models:
-                            # Basic model info
-                            model_line = f"• {model}"
+                            model_text = f"- {model}"
                             
-                            # Add usage info if available
+                            # Model için kullanım bilgileri varsa ekleyelim
                             if 'usage_data' in st.session_state and model in st.session_state.usage_data.get("models", {}):
                                 model_data = st.session_state.usage_data["models"][model]
                                 if "tokens" in model_data:
                                     tokens = model_data["tokens"]
-                                    model_line += f" ({tokens.get('total', 0)} tokens"
+                                    model_text += f" ({tokens.get('total', 0)} tokens"
                                     if model_data.get("cost", 0) > 0:
                                         cost = model_data['cost']
-                                        model_line += f", ${cost:.4f}/1M"
-                                    model_line += ")"
+                                        # Türkçe formatta virgül kullanarak göster
+                                        # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
+                                        cost_str = f"{cost:.6f}".rstrip('0').rstrip('.').replace(".", ",")
+                                        model_text += f", ${cost_str}/1M"
+                                    model_text += ")"
                             
-                            model_list += model_line + "  \n"  # Two spaces for line break in markdown
-                        st.markdown(model_list)
+                            # Her model için ayrı bir markdown kullanarak tutarlı bir şekilde göster
+                            st.markdown(model_text)
             
             # Add to conversation history
             history_entry = {
@@ -734,7 +744,10 @@ def main():
                             st.markdown("**📊 Usage:**")
                             st.markdown(f"- {usage['total_tokens']} tokens")
                             if usage['total_cost'] > 0:
-                                st.markdown(f"- ${usage['total_cost']:.4f}/1M tokens")
+                                # Türkçe formatta virgül kullanarak göster
+                                # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
+                                cost_str = f"{usage['total_cost']:.6f}".rstrip('0').rstrip('.').replace(".", ",")
+                                st.markdown(f"- ${cost_str}/1M tokens")
                             else:
                                 st.markdown(f"- Free")
                             st.markdown(f"- {usage['total_time']:.2f}s")
