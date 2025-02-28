@@ -40,20 +40,35 @@ def load_coordinator_history():
         try:
             with open(COORDINATOR_HISTORY_FILE, 'r') as f:
                 data = json.load(f)
-                return data.get('models', [])
+                models = data.get('models', [])
+                logger.info(f"Loaded {len(models)} coordinator models from history file")
+                return models
         except Exception as e:
             logger.error(f"Error loading coordinator history: {e}")
     return []
 
-def save_coordinator_history(models):
-    """Save coordinator model history to file"""
+def save_coordinator_history(models, max_history=20):
+    """
+    Save coordinator model history to file
+    
+    Args:
+        models: List of model IDs to save
+        max_history: Maximum number of models to keep in history (default: 20)
+    """
     try:
         # Ensure data directory exists
         os.makedirs(os.path.dirname(COORDINATOR_HISTORY_FILE), exist_ok=True)
         
+        # Trim history to max_history if needed
+        if len(models) > max_history:
+            logger.info(f"Trimming coordinator history from {len(models)} to {max_history} models")
+            models = models[-max_history:]  # Keep the most recent models
+        
         # Create data object with timestamp
         data = {
             'last_updated': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'max_models': max_history,
+            'display_count': min(5, len(models)),  # Default to showing 5 models
             'models': models
         }
         
@@ -135,20 +150,52 @@ def main():
         if 'coordinator_models' not in st.session_state:
             st.session_state.coordinator_models = []
             
-        # Add a section for recent coordinator models
+        # Add a section for recent coordinator models with removal option
         st.subheader("Recent Coordinator Models")
         if st.session_state.recent_coordinator_models:
             # Create a container for the quick access buttons
             recent_models_container = st.container()
             with recent_models_container:
-                # Display last 5 used coordinator models as clickable buttons
-                cols = st.columns(1)
-                with cols[0]:
-                    for model in st.session_state.recent_coordinator_models[-5:]:
+                # Display last 5 used coordinator models as clickable buttons with remove option
+                MAX_DISPLAY_MODELS = 5
+                display_models = st.session_state.recent_coordinator_models[-MAX_DISPLAY_MODELS:] if len(st.session_state.recent_coordinator_models) > MAX_DISPLAY_MODELS else st.session_state.recent_coordinator_models
+                
+                for model in display_models:
+                    # Create two columns for each model - one for select button, one for remove button
+                    col1, col2 = st.columns([4, 1])
+                    with col1:
                         if st.button(f"▶ {model.split('/')[-1]}", key=f"recent_{model}"):
                             # Set the coordinator model to this model
                             st.session_state.selected_coordinator = model
                             st.rerun()
+                    with col2:
+                        if st.button("❌", key=f"remove_{model}", help=f"Remove {model.split('/')[-1]} from favorites"):
+                            # Remove this model from the list
+                            st.session_state.recent_coordinator_models.remove(model)
+                            # Save the updated list
+                            save_coordinator_history(st.session_state.recent_coordinator_models)
+                            st.rerun()
+                
+                # Show the number of additional stored models
+                additional_models = len(st.session_state.recent_coordinator_models) - len(display_models)
+                if additional_models > 0:
+                    st.caption(f"Plus {additional_models} more models in history")
+                    
+                # Add a "Show All" expander if we have more than MAX_DISPLAY_MODELS models
+                if len(st.session_state.recent_coordinator_models) > MAX_DISPLAY_MODELS:
+                    with st.expander("Show All Models", expanded=False):
+                        non_displayed = [m for m in st.session_state.recent_coordinator_models if m not in display_models]
+                        for model in non_displayed:
+                            col1, col2 = st.columns([4, 1])
+                            with col1:
+                                if st.button(f"▶ {model.split('/')[-1]}", key=f"all_recent_{model}"):
+                                    st.session_state.selected_coordinator = model
+                                    st.rerun()
+                            with col2:
+                                if st.button("❌", key=f"all_remove_{model}", help=f"Remove {model.split('/')[-1]} from favorites"):
+                                    st.session_state.recent_coordinator_models.remove(model)
+                                    save_coordinator_history(st.session_state.recent_coordinator_models)
+                                    st.rerun()
         else:
             st.info("No recent coordinator models yet.")
             
@@ -340,8 +387,8 @@ def main():
                 st.session_state.recent_coordinator_models.remove(coordinator_model)
             st.session_state.recent_coordinator_models.append(coordinator_model)
             
-            # Save updated list to file
-            save_coordinator_history(st.session_state.recent_coordinator_models)
+            # Save updated list to file - maintain up to 20 models in history
+            save_coordinator_history(st.session_state.recent_coordinator_models, max_history=20)
         
         # Option selection (free, paid, optimized)
         option = st.radio(
