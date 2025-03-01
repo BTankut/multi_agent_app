@@ -87,7 +87,7 @@ multi_agent_app/
    - Synchronizes model roles with available labels
    - Maintains backup of configuration files
 
-## Current Status (as of 2025-02-28)
+## Current Status (as of 2025-03-01)
 
 - Successfully implemented both CLI and Streamlit web interfaces
 - All core functionality working correctly
@@ -95,7 +95,11 @@ multi_agent_app/
 - Error handling improved with enhanced retry logic and exponential backoff
 - UI refined with model update capabilities and improved user experience
 - Provider diversity implemented to prevent rate limiting
-- Automatic model labels and roles updating system
+- Automatic model labels and roles updating system with strict consistency validation
+- Language consistency ensured across all models - always respond in query language
+- Robust etiket-rol tutarlılığı mekanizması with automatic validation
+- Fallback mechanism when specialized models aren't available
+- Tanımsız etiketleri otomatik temizleme mekanizması
 - Conversation history preservation for maintaining context
 - Automatic backup management with file rotation (5 most recent per type)
 - LaTeX sanitization for improved math formula display
@@ -154,6 +158,10 @@ multi_agent_app/
 - Error handling may need adjustment for specific API provider error formats
 - Streamlit session state requires careful management to prevent UI conflicts
 - Conversation history can grow large and impact performance with extended use
+- Model-role consistency requires proper update order: first roles, then labels
+- Language consistency requires all role prompts to include language instructions
+- Model labels must be validated against model_roles.json to prevent errors
+- When updating models, always run update_model_roles.py before update_model_labels.py
 
 ## Future Improvements
 
@@ -162,7 +170,9 @@ multi_agent_app/
 - Add multimodal support for images and file uploads
 - Improve visualization of coordinator-agent interactions with interactive diagrams
 - Resolve remaining OpenRouter API issues with 'choices' not found errors
-- Enhance automatic labeling for new models with more granular capability detection
+- Add more comprehensive language detection and response validation
+- Further enhance model-role-label consistency with automated testing
+- Improve auto-fallback to general_assistant when specialized models unavailable
 - Create more comprehensive model compatibility tests and automatic compatibility checks
 - Implement user preference settings persistence for coordinator model and options
 - Add model response caching for similar queries to reduce API costs
