@@ -20,6 +20,7 @@ Multi_Agent System is an AI orchestration platform that intelligently routes use
 
 - **Intelligent Query Analysis**: Automatically extracts query labels like code_expert, math_expert, etc.
 - **Dynamic Model Selection**: Chooses appropriate models based on query needs
+- **Smart Model Capability Detection**: Analyzes OpenRouter model pages for automatic tagging of new models
 - **Provider Diversity**: Limits models per provider to avoid rate limiting (max 2 per provider)
 - **Model Type Configuration**: Supports free, paid, or optimized model selection strategies  
 - **Response Synthesis**: Combines multiple model responses into cohesive answers
@@ -83,15 +84,20 @@ multi_agent_app/
 
 3. **Model Management**:
    - Automatic model update system from OpenRouter API
-   - Smart labeling for new models based on model characteristics
+   - Smart labeling for new models based on model characteristics and web descriptions
+   - Automatically scrapes model capabilities from OpenRouter model pages
+   - Analyzes web content for more accurate model expertise classification
    - Synchronizes model roles with available labels
    - Maintains backup of configuration files
+   - Ensures complete label-role definition consistency
 
 ## Current Status (as of 2025-03-01)
 
 - Successfully implemented both CLI and Streamlit web interfaces
 - All core functionality working correctly
 - API integration complete with OpenRouter with provider diversity
+- Enhanced model capability detection via OpenRouter web page scraping
+- Intelligent model expertise classification from model descriptions
 - Error handling improved with enhanced retry logic and exponential backoff
 - UI refined with model update capabilities and improved user experience
 - Provider diversity implemented to prevent rate limiting
@@ -168,6 +174,9 @@ multi_agent_app/
 - Implement budget controls with spending limits and alerts
 - Enhance query analysis for better label extraction
 - Add multimodal support for images and file uploads
+- Extend model capability scraping with AI analysis of model descriptions
+- Use ML techniques to better classify model capabilities from web content
+- Support detection of more specialized capabilities (chemistry, biology, etc.)
 - Improve visualization of coordinator-agent interactions with interactive diagrams
 - Resolve remaining OpenRouter API issues with 'choices' not found errors
 - Add more comprehensive language detection and response validation
