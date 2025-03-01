@@ -5,6 +5,7 @@ import datetime
 import requests
 import regex as re
 import time
+import traceback
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -32,6 +33,76 @@ def load_json(file_path):
     except json.JSONDecodeError:
         logger.error(f"Invalid JSON in file: {file_path}")
         return None
+
+def get_model_description(model_id):
+    """
+    Fetches a model's description from its OpenRouter model page.
+    
+    Args:
+        model_id: The model ID in format provider/model-name
+    
+    Returns:
+        A dictionary with model description details or an empty dict if unavailable
+    """
+    model_url = f"https://openrouter.ai/{model_id}"
+    
+    try:
+        # Log the attempt
+        logger.info(f"Attempting to fetch description for model: {model_id} from {model_url}")
+        
+        # Make a request to the model page (without using BeautifulSoup since it's not installed)
+        response = requests.get(model_url, timeout=10)
+        
+        if response.status_code == 200:
+            # Get the content and use regex to find key information
+            content = response.text
+            
+            # Extract key pieces of information using regex
+            # This is a simplified version without BeautifulSoup
+            description = ""
+            
+            # Try to get the main description
+            description_match = re.search(r'<meta name="description" content="([^"]+)"', content)
+            if description_match:
+                meta_description = description_match.group(1).strip()
+                description += f"{meta_description}. "
+            
+            # Get context length
+            context_match = re.search(r'Context Length[^<]*<[^>]*>([^<]+)', content)
+            if context_match:
+                context_length = context_match.group(1).strip()
+                description += f"Context Length: {context_length}. "
+                
+            # Try to extract capabilities or features
+            capabilities = []
+            capability_matches = re.findall(r'<li[^>]*>([^<]+)(?:<[^>]+>)*</li>', content)
+            if capability_matches:
+                for match in capability_matches[:5]:  # limit to first 5 matches
+                    cleaned = match.strip()
+                    if len(cleaned) > 5 and len(cleaned) < 100:  # reasonable length
+                        capabilities.append(cleaned)
+            
+            if capabilities:
+                description += f"Capabilities: {', '.join(capabilities)}. "
+                
+            model_info = {
+                "description": description,
+                "capabilities": capabilities,
+                "url": model_url, 
+                "success": True
+            }
+            
+            logger.info(f"Successfully retrieved info for model {model_id}: {description[:100]}...")
+            return model_info
+            
+        else:
+            logger.warning(f"Failed to fetch model page, status code: {response.status_code}")
+            return {"success": False, "error": f"HTTP {response.status_code}"}
+            
+    except Exception as e:
+        logger.error(f"Error fetching model description for {model_id}: {str(e)}")
+        logger.debug(traceback.format_exc())
+        return {"success": False, "error": str(e)}
 
 def get_openrouter_models():
     """

@@ -147,6 +147,7 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
     model yeni ise akıllı etiketleme yapar.
     
     ÖNEMLİ: Tüm etiketlerin model_roles.json'da tanımlı olduğundan emin olur.
+    Yeni: Modelin OpenRouter sayfasından ek bilgi toplar.
     """
     model_id = model_info.get('id', '')
     
@@ -183,6 +184,39 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
         # Dönüştürme hatası durumunda varsayılan olarak free etiketini ekle (varsa)
         if "free" in available_labels:
             labels.append("free")
+    
+    # Yeni: OpenRouter sayfasından model bilgilerini çek
+    try:
+        from utils import get_model_description
+        model_details = get_model_description(model_id)
+        
+        if model_details and model_details.get("success", False):
+            logger.info(f"Additional info found for model {model_id}: {model_details.get('description', '')}")
+            
+            # Model açıklamasından etiketleri çıkart
+            description = model_details.get("description", "").lower()
+            
+            # Akıl yürütme uzmanı için
+            if "reasoning" in description:
+                if "reasoning_expert" in available_labels:
+                    labels.append("reasoning_expert")
+                    
+            # Matematik için
+            if "math" in description:
+                if "math_expert" in available_labels:
+                    labels.append("math_expert")
+                    
+            # Kod uzmanlığı için
+            if any(term in description for term in ["code", "coding", "programming"]):
+                if "code_expert" in available_labels:
+                    labels.append("code_expert")
+                    
+            # Görüntü analizi
+            if any(term in description for term in ["vision", "image", "visual"]):
+                if "vision_expert" in available_labels:
+                    labels.append("vision_expert")
+    except Exception as e:
+        logger.warning(f"Error fetching additional info for model {model_id}: {str(e)}")
     
     # Model ID'sine göre otomatik etiketleme
     model_id_lower = model_id.lower()
