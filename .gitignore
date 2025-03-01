@@ -21,6 +21,10 @@ conversation_log.txt
 ehthumbs.db
 Thumbs.db
 
+# User-specific data files
+data/coordinator_history.json
+api_test_results/
+
 # Virtual environments
 venv/
 env/

@@ -145,15 +145,29 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
     """
     Bir model için etiketleri belirler. Önce mevcut etiketleri kullanır, 
     model yeni ise akıllı etiketleme yapar.
+    
+    ÖNEMLİ: Tüm etiketlerin model_roles.json'da tanımlı olduğundan emin olur.
     """
     model_id = model_info.get('id', '')
     
-    # Eğer model zaten etiketlenmişse, mevcut etiketleri kullan
+    # Eğer model zaten etiketlenmişse, mevcut etiketleri kullan ve doğrula
     if model_id in existing_labels:
-        return existing_labels[model_id]
+        # Mevcut etiketleri available_labels ile filtrele - model_roles.json'da olmayan etiketleri temizle
+        valid_labels = [label for label in existing_labels[model_id] if label in available_labels]
+        
+        # Eğer hiç geçerli etiket kalmadıysa, yeni etiketler oluştur
+        if not valid_labels:
+            logger.warning(f"Model {model_id} için hiçbir geçerli etiket bulunamadı, yeniden etiketleniyor.")
+        else:
+            # En az bir geçerli etiket varsa, onu kullan
+            return valid_labels
     
     # Yeni model için etiketleri belirle
-    labels = ["general_assistant"]  # Her model en az genel asistan olarak işaretlenir
+    labels = []
+    
+    # "general_assistant" etiketini kontrol et ve ekle
+    if "general_assistant" in available_labels:  # Her model en az genel asistan olarak işaretlenir
+        labels.append("general_assistant")
     
     # Ücret durumuna göre etiketleme
     try:
@@ -161,13 +175,14 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
         # Sayısal değere dönüştür (string olabilir)
         prompt_price = float(prompt_price) if prompt_price else 0
         
-        if prompt_price > 0:
+        if prompt_price > 0 and "paid" in available_labels:
             labels.append("paid") 
-        else:
+        elif "free" in available_labels:
             labels.append("free")
     except (ValueError, TypeError):
-        # Dönüştürme hatası durumunda varsayılan olarak free etiketini ekle
-        labels.append("free")
+        # Dönüştürme hatası durumunda varsayılan olarak free etiketini ekle (varsa)
+        if "free" in available_labels:
+            labels.append("free")
     
     # Model ID'sine göre otomatik etiketleme
     model_id_lower = model_id.lower()
@@ -213,6 +228,16 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
         if "multilingual" in available_labels:
             labels.append("multilingual")
     
+    # Konuşmacı modeller - yeni eklenen etiket için kontrol
+    if any(term in model_id_lower for term in ["chat", "convers", "talk"]):
+        if "conversationalist" in available_labels:
+            labels.append("conversationalist")
+    
+    # Yaratıcı yazar modelleri
+    if any(term in model_id_lower for term in ["creative", "writer", "narrat"]):
+        if "creative_writer" in available_labels:
+            labels.append("creative_writer")
+    
     # Model boyutuna göre etiketleme
     size_match = re.search(r'(\d+)[bB]', model_id)
     if size_match:
@@ -221,13 +246,24 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
             if "reasoning_expert" in available_labels and "reasoning_expert" not in labels:
                 labels.append("reasoning_expert")
     
-    # Etiketleri benzersiz yap
-    return list(set(labels))
+    # Eğer hiç etiket belirlenemezse, general_assistant'ı varsayılan olarak ekle
+    if not labels and "general_assistant" in available_labels:
+        labels.append("general_assistant")
+    
+    # Etiketleri benzersiz yap ve sadece geçerli (model_roles.json'da tanımlı) olanları tut
+    valid_labels = list(set([label for label in labels if label in available_labels]))
+    
+    # Eğer hiç geçerli etiket yoksa, "general_assistant" ekle (eğer tanımlıysa)
+    if not valid_labels and "general_assistant" in available_labels:
+        valid_labels.append("general_assistant")
+    
+    return valid_labels
 
 def update_model_labels():
     """
     OpenRouter API'den model listesini çeker ve model_labels.json dosyasını günceller.
     Mevcut etiketleri korur ve yeni modeller için otomatik etiketleme yapar.
+    ÖNEMLİ: Tüm etiketlerin model_roles.json'da tanımlı olduğunu doğrular.
     """
     # Mevcut dosyaları yedekle
     if not backup_file(MODEL_LABELS_FILE):
@@ -245,27 +281,58 @@ def update_model_labels():
     
     if not available_labels:
         logger.error("Kullanılabilir etiketler yüklenemedi, işlem iptal ediliyor")
+        logger.error("model_roles.json dosyasını kontrol edin! Önce update_model_roles.py çalıştırılmalı olabilir.")
         return False
+    
+    # Uyarı: model_roles.json'dan kullanılabilir etiketleri göster
+    logger.info(f"model_roles.json'da tanımlı {len(available_labels)} etiket: {', '.join(available_labels)}")
+    
+    # Mevcut etiketlerdeki tutarsızlıkları kontrol et
+    invalid_labels_count = 0
+    for model_id, labels in existing_labels.items():
+        invalid_labels = [label for label in labels if label not in available_labels]
+        if invalid_labels:
+            invalid_labels_count += 1
+            logger.warning(f"Model {model_id} tanımsız etiketler içeriyor: {', '.join(invalid_labels)}")
+    
+    if invalid_labels_count > 0:
+        logger.warning(f"Toplam {invalid_labels_count} model tanımsız etiketler içeriyor. Bu etiketler temizlenecek.")
     
     # Yeni model_labels.json verisi oluştur
     new_model_labels = []
     updated_count = 0
     new_count = 0
+    cleaned_count = 0
     
     for model in openrouter_models:
         model_id = model.get('id', '')
         if not model_id:
             continue
         
-        # Model etiketlerini belirle
+        # Model etiketlerini belirle - bu fonksiyon artık sadece geçerli etiketleri döndürür
+        old_labels = existing_labels.get(model_id, [])
         labels = determine_labels_for_model(model, available_labels, existing_labels)
         
         # Yeni veya güncellenen model sayısını izle
         if model_id in existing_labels:
-            if set(labels) != set(existing_labels[model_id]):
-                updated_count += 1
+            old_valid_labels = [label for label in old_labels if label in available_labels]
+            # Eğer eski etiketlerle yeni etiketler arasında fark varsa
+            if set(labels) != set(old_valid_labels):
+                # Eğer eski etiketlerde tanımsız etiketler vardıysa, temizlendiler
+                if len(old_valid_labels) != len(old_labels):
+                    cleaned_count += 1
+                    logger.info(f"Model {model_id} için tanımsız etiketler temizlendi: " +
+                              f"Eski: {old_labels}, Yeni: {labels}")
+                else:
+                    updated_count += 1
         else:
             new_count += 1
+            logger.info(f"Yeni model eklendi: {model_id} - Etiketler: {labels}")
+        
+        # Son olarak, modelin en az bir etiketi olduğundan emin ol
+        if not labels and "general_assistant" in available_labels:
+            labels = ["general_assistant"]
+            logger.warning(f"Model {model_id} için hiç etiket belirlenemedi. 'general_assistant' eklendi.")
         
         # Modeli yeni listeye ekle
         new_model_labels.append({
@@ -278,6 +345,21 @@ def update_model_labels():
         logger.info(f"Model etiketleri güncellendi: {len(new_model_labels)} toplam model")
         logger.info(f"  - {new_count} yeni model eklendi")
         logger.info(f"  - {updated_count} mevcut model güncellendi")
+        logger.info(f"  - {cleaned_count} model tanımsız etiketlerden temizlendi")
+        
+        # Son kontrol - tüm etiketler model_roles.json'da tanımlı mı?
+        all_used_labels = set()
+        for entry in new_model_labels:
+            all_used_labels.update(entry.get("labels", []))
+        
+        missing_roles = [label for label in all_used_labels if label not in available_labels]
+        if missing_roles:
+            logger.error(f"HATA: Bazı etiketler hala model_roles.json'da tanımlı değil: {', '.join(missing_roles)}")
+            logger.error("Bu bir mantık hatası olmamalı! Kodunuzu kontrol edin.")
+            return False
+        else:
+            logger.info("Tutarlılık kontrolü başarılı: Tüm etiketler model_roles.json'da tanımlı.")
+        
         return True
     else:
         logger.error("Model etiketleri güncellenirken hata oluştu")

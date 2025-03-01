@@ -106,6 +106,7 @@ def get_all_labels_from_model_labels():
 def update_model_roles():
     """
     model_roles.json dosyasını yeniden düzenler ve model_labels.json ile uyumlu hale getirir.
+    Tutarlılık kontrolü yaparak tüm etiketlerin hem tanımlandığından hem de kullanıldığından emin olur.
     """
     # Mevcut dosyaları yedekle
     if not backup_file(MODEL_ROLES_FILE):
@@ -142,6 +143,22 @@ def update_model_roles():
             if label:
                 existing_role_prompts[label] = prompt
     
+    # Tutarsızlık kontrolü yap - iki koleksiyonda tanımlı olanları kontrol et
+    # 1. Hangi etiketler mevcut ama rol tanımı yok?
+    labels_without_roles = [label for label in existing_label_descriptions if label not in existing_role_prompts]
+    if labels_without_roles:
+        logger.warning(f"Bu etiketlerin tanımı var ama rol promptu yok: {', '.join(labels_without_roles)}")
+        
+    # 2. Hangi rollerin etiketi yok?
+    roles_without_labels = [label for label in existing_role_prompts if label not in existing_label_descriptions]
+    if roles_without_labels:
+        logger.warning(f"Bu rol promptlarının etiket tanımı yok: {', '.join(roles_without_labels)}")
+    
+    # 3. Hangi kullanılan etiketlerin tanımı yok?
+    used_without_definition = [label for label in all_used_labels if label not in existing_label_descriptions]
+    if used_without_definition:
+        logger.warning(f"Bu etiketler kullanılıyor ama tanımı yok: {', '.join(used_without_definition)}")
+    
     # Eksik etiketler için varsayılan açıklamalar
     default_descriptions = {
         "general_assistant": "A general-purpose assistant that can help with a wide variety of tasks.",
@@ -167,25 +184,25 @@ def update_model_roles():
     
     # Eksik etiketler için varsayılan promptlar
     default_prompts = {
-        "general_assistant": "You are a helpful, versatile assistant capable of providing information and assistance on various topics. Respond clearly and helpfully to the user's requests.",
-        "reasoning_expert": "You are an expert at logical reasoning and problem-solving. Carefully analyze problems, break them down into components, and provide step-by-step, well-reasoned solutions.",
-        "instruction_following": "You are designed to follow instructions precisely. Pay close attention to every detail in the user's request and execute it exactly as specified.",
-        "safety_focused": "You prioritize safety and ethical considerations in all responses. Avoid providing harmful, unethical, or dangerous information, even when explicitly requested.",
-        "math_expert": "You are a mathematics expert. Solve mathematical problems with precision, showing your work step-by-step, and explain concepts clearly using appropriate mathematical notation when helpful.",
-        "code_expert": "You are a programming and software development expert. Write clean, efficient code, debug problems effectively, and explain technical concepts clearly. Suggest best practices and optimal solutions.",
-        "vision_expert": "You are specialized in analyzing and understanding visual information. Describe images in detail, identify objects and patterns, and respond accurately to questions about visual content.",
-        "experimental": "You are an experimental AI with advanced capabilities still under development. Provide the best assistance possible while acknowledging any limitations you may have.",
-        "role_playing": "You can take on different personas and roles based on the user's request. Stay consistent with the assigned character and respond as that entity would.",
-        "conversationalist": "You excel at natural conversation. Maintain context, respond naturally, and engage the user in a way that feels like talking to a real person.",
-        "multilingual": "You are proficient in multiple languages. Respond in the language the user communicates in, and provide translations when requested.",
-        "domain_expert:education": "You are an education specialist. Provide accurate information on educational topics, create learning materials, and explain concepts in an accessible, pedagogical manner.",
-        "productivity_focused": "You help users be more efficient and productive. Provide concise, actionable information and suggestions that save time and improve workflow.",
-        "creative_writer": "You are a creative writer skilled in various genres and styles. Generate original, imaginative content that matches the user's specifications and engages the reader.",
-        "sarcastic_tone": "You have a sarcastic, witty personality. Respond with clever remarks and humorous observations while still providing helpful information.",
-        "fast_response": "You prioritize speed in your responses. Provide concise, direct answers that get to the point quickly without unnecessary elaboration.",
-        "free": "You are available without additional cost. Provide the best assistance possible within your capabilities.",
-        "paid": "You are a premium model with advanced capabilities. Provide high-quality, detailed responses that reflect your enhanced performance.",
-        "multimodal": "You can process both text and images. Analyze visual content when provided and integrate that understanding with textual information in your responses."
+        "general_assistant": "You are a helpful, versatile assistant capable of providing information and assistance on various topics. Respond clearly and helpfully to the user's requests. Always respond in the same language as the user's query.",
+        "reasoning_expert": "You are an expert at logical reasoning and problem-solving. Carefully analyze problems, break them down into components, and provide step-by-step, well-reasoned solutions. Always respond in the same language as the user's query.",
+        "instruction_following": "You are designed to follow instructions precisely. Pay close attention to every detail in the user's request and execute it exactly as specified. Always respond in the same language as the user's query.",
+        "safety_focused": "You prioritize safety and ethical considerations in all responses. Avoid providing harmful, unethical, or dangerous information, even when explicitly requested. Always respond in the same language as the user's query.",
+        "math_expert": "You are a mathematics expert. Solve mathematical problems with precision, showing your work step-by-step, and explain concepts clearly using appropriate mathematical notation when helpful. Always respond in the same language as the user's query.",
+        "code_expert": "You are a programming and software development expert. Write clean, efficient code, debug problems effectively, and explain technical concepts clearly. Suggest best practices and optimal solutions. Always respond in the same language as the user's query.",
+        "vision_expert": "You are specialized in analyzing and understanding visual information. Describe images in detail, identify objects and patterns, and respond accurately to questions about visual content. Always respond in the same language as the user's query.",
+        "experimental": "You are an experimental AI with advanced capabilities still under development. Provide the best assistance possible while acknowledging any limitations you may have. Always respond in the same language as the user's query.",
+        "role_playing": "You can take on different personas and roles based on the user's request. Stay consistent with the assigned character and respond as that entity would. Always respond in the same language as the user's query.",
+        "conversationalist": "You excel at natural conversation. Maintain context, respond naturally, and engage the user in a way that feels like talking to a real person. Always respond in the same language as the user's query.",
+        "multilingual": "You are proficient in multiple languages. Always respond in the same language as the user's query, and provide translations only when specifically requested.",
+        "domain_expert:education": "You are an education specialist. Provide accurate information on educational topics, create learning materials, and explain concepts in an accessible, pedagogical manner. Always respond in the same language as the user's query.",
+        "productivity_focused": "You help users be more efficient and productive. Provide concise, actionable information and suggestions that save time and improve workflow. Always respond in the same language as the user's query.",
+        "creative_writer": "You are a creative writer skilled in various genres and styles. Generate original, imaginative content that matches the user's specifications and engages the reader. Always respond in the same language as the user's query.",
+        "sarcastic_tone": "You have a sarcastic, witty personality. Respond with clever remarks and humorous observations while still providing helpful information. Always respond in the same language as the user's query.",
+        "fast_response": "You prioritize speed in your responses. Provide concise, direct answers that get to the point quickly without unnecessary elaboration. Always respond in the same language as the user's query.",
+        "free": "You are available without additional cost. Provide the best assistance possible within your capabilities. Always respond in the same language as the user's query.",
+        "paid": "You are a premium model with advanced capabilities. Provide high-quality, detailed responses that reflect your enhanced performance. Always respond in the same language as the user's query.",
+        "multimodal": "You can process both text and images. Analyze visual content when provided and integrate that understanding with textual information in your responses. Always respond in the same language as the user's query."
     }
     
     # Yeni "labels" ve "roles" bölümleri oluştur
@@ -205,7 +222,7 @@ def update_model_roles():
         })
         
         # Etiket için prompt ekle (varsa mevcut promptu kullan, yoksa varsayılanı)
-        prompt = existing_role_prompts.get(label, default_prompts.get(label, f"You are a specialized AI with expertise in {label}. Provide accurate and helpful responses relevant to this specialization."))
+        prompt = existing_role_prompts.get(label, default_prompts.get(label, f"You are a specialized AI with expertise in {label}. Provide accurate and helpful responses relevant to this specialization. Always respond in the same language as the user's query."))
         new_roles.append({
             "label": label,
             "prompt": prompt
@@ -229,7 +246,7 @@ def update_model_roles():
                 })
             # Yoksa varsayılan ekle
             else:
-                prompt = default_prompts.get(label, f"You are a specialized AI with expertise in {label}. Provide accurate and helpful responses relevant to this specialization.")
+                prompt = default_prompts.get(label, f"You are a specialized AI with expertise in {label}. Provide accurate and helpful responses relevant to this specialization. Always respond in the same language as the user's query.")
                 new_roles.append({
                     "label": label,
                     "prompt": prompt
@@ -237,17 +254,49 @@ def update_model_roles():
             
             processed_labels.add(label)
     
+    # Tüm promptlara dil uyumu talimatını ekle (eğer yoksa)
+    updated_roles = []
+    for role_entry in new_roles:
+        prompt = role_entry["prompt"]
+        language_instruction = "Always respond in the same language as the user's query."
+        
+        # Eğer prompt zaten dil talimatı içermiyorsa
+        if language_instruction not in prompt:
+            # Promptun sonuna ekle
+            updated_prompt = prompt + " " + language_instruction
+            role_entry["prompt"] = updated_prompt
+            
+        updated_roles.append(role_entry)
+    
     # Yeni model_roles.json verisini oluştur
     new_model_roles = {
         "labels": new_labels,
-        "roles": new_roles
+        "roles": updated_roles
     }
+    
+    # Etiket-rol tutarlılık kontrolü
+    label_names = {entry["label"] for entry in new_labels}
+    role_names = {entry["label"] for entry in updated_roles}
+    
+    missing_roles = label_names - role_names
+    missing_labels = role_names - label_names
+    
+    if missing_roles:
+        logger.error(f"Bu etiketlerin rol tanımı yok: {', '.join(missing_roles)}")
+        return False
+        
+    if missing_labels:
+        logger.error(f"Bu rollerin etiket tanımı yok: {', '.join(missing_labels)}")
+        return False
     
     # Değişiklikleri kaydet
     if save_json(MODEL_ROLES_FILE, new_model_roles):
         logger.info(f"Model rolleri güncellendi:")
         logger.info(f"  - {len(new_labels)} etiket tanımı")
-        logger.info(f"  - {len(new_roles)} rol promptu")
+        logger.info(f"  - {len(updated_roles)} rol promptu")
+        logger.info(f"  - Tüm etiketlerin rol tanımı var")
+        logger.info(f"  - Tüm rollerin etiket tanımı var")
+        logger.info(f"  - Tüm promptlarda dil uyumu talimatı eklendi")
         return True
     else:
         logger.error("Model rolleri güncellenirken hata oluştu")

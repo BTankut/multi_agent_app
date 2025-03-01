@@ -61,6 +61,13 @@ def get_models_by_labels(labels, option, openrouter_models, min_models=1, max_mo
     for model_entry in model_labels_data:
         if any(label in model_entry["labels"] for label in labels):
             matching_models.append(model_entry["model"])
+            
+    # If no models match the specified labels, fallback to general_assistant models
+    if not matching_models:
+        logger.warning(f"No models found for labels: {', '.join(labels)}. Falling back to general_assistant.")
+        for model_entry in model_labels_data:
+            if "general_assistant" in model_entry["labels"]:
+                matching_models.append(model_entry["model"])
     
     # Filter based on user option
     if option == "free":

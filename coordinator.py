@@ -62,6 +62,7 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
         
         Consider the conversation context and the new query.
         Return ONLY the labels for the new query, separated by commas. No additional explanation.
+        Always respond in the same language as the user query.
         """
     else:
         # Standard prompt without context
@@ -73,6 +74,7 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
         User Query: {query}
         
         Return ONLY the labels, separated by commas. No additional explanation.
+        Always respond in the same language as the user query.
         """
     
     # Ask the coordinator model to analyze the query
@@ -198,7 +200,9 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
     
     if not selected_models:
         logger.error("No suitable models found for the query")
-        return "No suitable models were found to process this query."
+        error_message = "No suitable models were found to process this query."
+        # Ensure we always return a tuple to match the expected return format
+        return error_message, updated_agent_history
     
     # Assign roles to models
     model_roles = get_model_roles(selected_models, labels)
@@ -419,6 +423,7 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                         Original Query: {query}
                         
                         Determine which answer is correct or provide a better alternative.
+                        Always respond in the same language as the original user query.
                         """
                         
                         if 'process_log' in st.session_state:
@@ -479,7 +484,8 @@ Important formatting notes:
 1. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.) in your answer.
 2. Present math formulas in a plain text format that is readable (use * for multiplication, / for division).
 3. If you need to format an equation, use simple text formatting (e.g., "x = 5" instead of "$x = 5$").
-4. If you need to highlight an answer, use markdown boldface (e.g., **12**) instead of \\boxed{12}."""
+4. If you need to highlight an answer, use markdown boldface (e.g., **12**) instead of \\boxed{12}.
+5. Always respond in the same language as the original user query."""
         
         # Store the coordinator messages for UI display
         if 'coordinator_messages' in st.session_state:

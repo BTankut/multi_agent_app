@@ -245,16 +245,16 @@ def main():
                     import sys
                     import tempfile
                     
-                    # Model etiketlerini güncelle
-                    labels_result = subprocess.run(
-                        [sys.executable, "update_model_labels.py"],
+                    # ÖNEMLİ: Önce model rollerini güncelle!
+                    roles_result = subprocess.run(
+                        [sys.executable, "update_model_roles.py"],
                         capture_output=True,
                         text=True
                     )
                     
-                    # Sonra model rollerini güncelle (sıralama önemli)
-                    roles_result = subprocess.run(
-                        [sys.executable, "update_model_roles.py"],
+                    # Sonra model etiketlerini güncelle (sıralama önemli)
+                    labels_result = subprocess.run(
+                        [sys.executable, "update_model_labels.py"],
                         capture_output=True,
                         text=True
                     )
@@ -264,17 +264,19 @@ def main():
                         # Model bilgilerini çıkart
                         # Etiket güncelleme bilgileri
                         # Debug çıktısını görüntüle
-                        logger.info(f"Labels output: {labels_result.stdout}")
                         logger.info(f"Roles output: {roles_result.stdout}")
+                        logger.info(f"Labels output: {labels_result.stdout}")
                         
                         # Türkçe log mesajlarıyla eşleşecek regex'ler
                         total_match = re.search(r'(\d+) toplam model', labels_result.stdout)
                         new_match = re.search(r'(\d+) yeni model', labels_result.stdout)
                         updated_match = re.search(r'(\d+) mevcut model', labels_result.stdout)
+                        cleaned_match = re.search(r'(\d+) model tanımsız etiketlerden temizlendi', labels_result.stdout)
                         
                         total = total_match.group(1) if total_match else str(len(get_openrouter_models()))
                         new = new_match.group(1) if new_match else "0"
                         updated = updated_match.group(1) if updated_match else "0"
+                        cleaned = cleaned_match.group(1) if cleaned_match else "0"
                         
                         # Rol güncelleme bilgileri
                         labels_match = re.search(r'(\d+) etiket tanımı', roles_result.stdout)
@@ -286,18 +288,18 @@ def main():
                         
                         # Başarılı güncelleme mesajı
                         st.success(f"""✅ Model data successfully updated:
-                        - {total} models total ({new} new, {updated} updated)
-                        - {labels} label definitions
-                        - {roles} role prompts""")
+                        - {total} models total ({new} new, {updated} updated, {cleaned} cleaned)
+                        - {labels} label definitions and {roles} role prompts
+                        - Full label-role consistency ensured""")
                         
                         # Otomatik olarak OpenRouter modellerini yenile
                         st.session_state.openrouter_models = get_openrouter_models()
                     else:
                         # Hata durumu
-                        if labels_result.returncode != 0:
-                            st.error(f"❌ Error updating model labels: {labels_result.stderr}")
                         if roles_result.returncode != 0:
                             st.error(f"❌ Error updating model roles: {roles_result.stderr}")
+                        if labels_result.returncode != 0:
+                            st.error(f"❌ Error updating model labels: {labels_result.stderr}")
                 except Exception as e:
                     st.error(f"❌ Failed to update model data: {str(e)}")
         

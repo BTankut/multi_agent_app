@@ -1,5 +1,31 @@
 [
   {
+    "model": "moonshotai/moonlight-16b-a3b-instruct:free",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "free"
+    ]
+  },
+  {
+    "model": "nousresearch/deephermes-3-llama-3-8b-preview:free",
+    "labels": [
+      "general_assistant",
+      "free",
+      "experimental"
+    ]
+  },
+  {
+    "model": "openai/gpt-4.5-preview",
+    "labels": [
+      "paid",
+      "math_expert",
+      "general_assistant",
+      "experimental",
+      "reasoning_expert"
+    ]
+  },
+  {
     "model": "google/gemini-2.0-flash-lite-001",
     "labels": [
       "fast_response",
@@ -173,6 +199,16 @@
       "instruction_following",
       "general_assistant",
       "free"
+    ]
+  },
+  {
+    "model": "qwen/qwen2.5-vl-72b-instruct",
+    "labels": [
+      "paid",
+      "general_assistant",
+      "vision_expert",
+      "reasoning_expert",
+      "instruction_following"
     ]
   },
   {
@@ -573,6 +609,15 @@
     "labels": [
       "general_assistant",
       "paid"
+    ]
+  },
+  {
+    "model": "qwen/qwen-2.5-coder-32b-instruct:free",
+    "labels": [
+      "code_expert",
+      "general_assistant",
+      "instruction_following",
+      "free"
     ]
   },
   {
@@ -988,13 +1033,6 @@
     ]
   },
   {
-    "model": "perplexity/llama-3.1-sonar-huge-128k-online",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "openai/chatgpt-4o-latest",
     "labels": [
       "general_assistant",
@@ -1146,6 +1184,22 @@
       "math_expert",
       "reasoning_expert",
       "paid"
+    ]
+  },
+  {
+    "model": "qwen/qwen-2-7b-instruct:free",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "free"
+    ]
+  },
+  {
+    "model": "qwen/qwen-2-7b-instruct",
+    "labels": [
+      "general_assistant",
+      "paid",
+      "instruction_following"
     ]
   },
   {
@@ -1339,6 +1393,21 @@
       "math_expert",
       "reasoning_expert",
       "paid"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3-8b",
+    "labels": [
+      "general_assistant",
+      "paid"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3-70b",
+    "labels": [
+      "general_assistant",
+      "paid",
+      "reasoning_expert"
     ]
   },
   {
