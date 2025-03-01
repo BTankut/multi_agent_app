@@ -99,6 +99,18 @@ def initialize_session_state():
     # Processing state - ESSENTIAL for query handling
     if 'is_ready_to_process' not in st.session_state:
         st.session_state.is_ready_to_process = False
+        
+    # Alternative model state for error recovery
+    if 'use_alternative_model' not in st.session_state:
+        st.session_state.use_alternative_model = None
+        
+    # For suggested alternative models
+    if 'suggested_alt_model' not in st.session_state:
+        st.session_state.suggested_alt_model = None
+        
+    # For storing coordinator error details
+    if 'coordinator_error_details' not in st.session_state:
+        st.session_state.coordinator_error_details = None
     
     # Response tracking
     if 'selected_agents' not in st.session_state:
@@ -141,6 +153,89 @@ def main():
     
     # Initialize session state
     initialize_session_state()
+    
+    # Early error handling - check for coordinator errors at the very beginning
+    # This ensures error UI is shown regardless of where the error occurred
+    if st.session_state.coordinator_error_details:
+        error_details = st.session_state.coordinator_error_details
+        error_type = error_details.get("error_type")
+        coordinator_model = error_details.get("coordinator_model")
+        alternative_model_from_error = error_details.get("alternative_model")
+        error_message = error_details.get("error_message", "Unknown error")
+        
+        # Ensure we have a valid alternative model
+        alternative_model = alternative_model_from_error
+        
+        # If the model from error is None or matches the current failing model, find a better alternative
+        if not alternative_model or alternative_model == "None" or alternative_model == coordinator_model:
+            # Get the recently used models from history (excluding the current failing model)
+            recent_models = []
+            if st.session_state.recent_coordinator_models:
+                # Filter out the current failing model
+                recent_models = [m for m in st.session_state.recent_coordinator_models if m != coordinator_model]
+            
+            # If we have recent models, use the most recent one that's different
+            if recent_models:
+                alternative_model = recent_models[-1]  # Most recent model
+                logger.info(f"Using most recent model from history: {alternative_model}")
+            else:
+                # Otherwise use a safe hardcoded fallback
+                alternative_model = "google/gemini-2.0-pro-exp-02-05:free"
+                logger.info(f"Using hardcoded fallback model: {alternative_model}")
+        
+        # Always log the details for debugging
+        logger.info(f"Error details: {error_type}, {coordinator_model}, alt: {alternative_model}")
+        
+        # Display error message in a prominent error box
+        st.error(f"""
+        ### Coordinator Model Error: {error_type}
+        
+        The coordinator model `{coordinator_model}` returned an error:
+        
+        ```
+        {error_message}
+        ```
+        
+        **Suggested alternative:** `{alternative_model}`
+        """)
+        
+        # ALWAYS show a retry button - use hardcoded alternative if needed
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            # Primary button with clear action
+            if st.button("✅ Switch to alternative model and retry query", type="primary", key="switch_model_btn"):
+                # Set the alternative model
+                st.session_state.selected_coordinator = alternative_model
+                
+                # Update recent models list
+                if alternative_model in st.session_state.recent_coordinator_models:
+                    st.session_state.recent_coordinator_models.remove(alternative_model)
+                st.session_state.recent_coordinator_models.append(alternative_model)
+                
+                # Save to file
+                save_coordinator_history(st.session_state.recent_coordinator_models, max_history=20)
+                
+                # Set up for reprocessing
+                st.session_state.is_ready_to_process = True
+                
+                # Clear error state
+                st.session_state.coordinator_error_details = None
+                st.session_state.suggested_alt_model = None
+                
+                # Add to log for tracing
+                logger.info(f"User chose to switch to alternative model: {alternative_model}")
+                
+                # Force UI refresh with new model
+                st.rerun()
+                
+        with col2:
+            # Add a dismissal button
+            if st.button("❌ Dismiss", key="dismiss_error_btn"):
+                # Clear error state
+                st.session_state.coordinator_error_details = None
+                st.session_state.suggested_alt_model = None
+                st.rerun()
     
     # Sidebar for configuration
     with st.sidebar:
@@ -445,6 +540,10 @@ def main():
             # Reset processing flags
             st.session_state.is_ready_to_process = False
             
+            # Clear any coordinator error details
+            st.session_state.coordinator_error_details = None
+            st.session_state.suggested_alt_model = None
+            
             # Add a success message
             st.success("Conversation history cleared! You can start a new conversation.")
             
@@ -459,18 +558,38 @@ def main():
                 # Use a much smaller, less intrusive indicator
                 st.caption(f"Conversation continues with {msg_count} previous turns")
     
+    # We already handle coordinator errors at the beginning of the app
+    # So no need to duplicate that here
+    
     # Use a form to completely isolate the query processing from any other UI elements
-    with st.form(key="query_form", clear_on_submit=True):
+    with st.form(key="query_form", clear_on_submit=False):  # Changed to not clear on submit
         # Form title
         st.write("**Enter Your Query Below**")
+        
+        # Auto-fill query field if we have a current_query (for error recovery)
+        initial_query = st.session_state.current_query if 'current_query' in st.session_state and st.session_state.current_query else ""
         
         # Query input field
         query_input = st.text_area(
             "Enter your query:", 
+            value=initial_query,
             height=150,
             key="query_form_input"
         )
         
+        # Add a hidden field to pass along the model selection if switching after error
+        use_alt_model = ""
+        if 'suggested_alt_model' in st.session_state and st.session_state.suggested_alt_model:
+            # Add a checkbox to use the suggested model with more prominent styling
+            st.markdown("### ⚠️ Coordinator Error Recovery")
+            use_suggested = st.checkbox(
+                f"Use suggested model: {st.session_state.suggested_alt_model}", 
+                value=True,
+                key="use_suggested_model"
+            )
+            if use_suggested:
+                use_alt_model = st.session_state.suggested_alt_model
+                
         # Submit button
         submit_query = st.form_submit_button("Process Query", type="primary")
         
@@ -481,6 +600,23 @@ def main():
                 st.session_state.current_query = query_input
                 st.session_state.last_action = "process_query"
                 st.session_state.is_ready_to_process = True
+                
+                # If we have an alternative model selected, use it
+                if use_alt_model:
+                    st.session_state.selected_coordinator = use_alt_model
+                    # Update recent models list
+                    if use_alt_model in st.session_state.recent_coordinator_models:
+                        st.session_state.recent_coordinator_models.remove(use_alt_model)
+                    st.session_state.recent_coordinator_models.append(use_alt_model)
+                    # Save updated list to file
+                    save_coordinator_history(st.session_state.recent_coordinator_models, max_history=20)
+                    # Clear the suggested model and error details
+                    st.session_state.suggested_alt_model = None
+                    st.session_state.coordinator_error_details = None
+                    # Add to process log
+                    if 'process_log' in st.session_state:
+                        st.session_state.process_log.append(f"🔄 Using alternative model: {use_alt_model}")
+                    
                 # Log
                 logger.info(f"Process button clicked for query: {query_input[:30]}...")
             else:
@@ -701,6 +837,7 @@ def main():
             # Check for coordinator model issues (rate limits, timeouts, etc)
             coordinator_error = False
             coordinator_needs_change = False
+            alternative_model = None
             
             # Specific error message handling
             if "rate limit" in error_str or "429" in error_str:
@@ -722,21 +859,93 @@ def main():
             elif "authentication" in error_str or "401" in error_str or "403" in error_str:
                 coordinator_error = True
                 error_type = "Authentication error"
+            elif "coordinator model error" in error_str or "coordinator synthesis error" in error_str:
+                coordinator_error = True
+                coordinator_needs_change = True
+                error_type = "Coordinator API error"
+                
+                # Check if an alternative model is suggested in the error message
+                # Log the full error string for debugging purposes
+                logger.info(f"Looking for alternative model in: {error_str}")
+                
+                # Try multiple regex patterns to increase chances of matching
+                alt_model_match = re.search(r"try using alternative coordinator model:\s*([a-zA-Z0-9/_\-:.]+)", error_str, re.IGNORECASE)
+                if not alt_model_match:
+                    alt_model_match = re.search(r"alternative coordinator model:\s*([a-zA-Z0-9/_\-:.]+)", error_str, re.IGNORECASE)
+                if not alt_model_match:
+                    # Try looking in the original error message, not the lowercase version
+                    alt_model_match = re.search(r"alternative coordinator model:\s*([a-zA-Z0-9/_\-:.]+)", error_message, re.IGNORECASE)
+                
+                if alt_model_match:
+                    alternative_model = alt_model_match.group(1).strip()
+                    logger.info(f"Found alternative model: {alternative_model}")
+                    if 'process_log' in st.session_state:
+                        st.session_state.process_log.append(f"Found suggested alternative model: {alternative_model}")
+                else:
+                    # Hardcoded fallback
+                    logger.warning("Could not find alternative model in error message, using hardcoded fallback.")
+                    alternative_model = "mistralai/mistral-small-24b-instruct-2501:free"
+                    if 'process_log' in st.session_state:
+                        st.session_state.process_log.append(f"Using fallback alternative model: {alternative_model}")
             else:
                 error_type = "Unexpected error"
                 
             # Special handling for coordinator errors
             if coordinator_error:
+                # Set a session state variable to indicate we have a coordinator error
+                # This will be used in the main UI to display the error message
+                st.session_state.coordinator_error_details = {
+                    "error_type": error_type,
+                    "coordinator_model": coordinator_model,
+                    "error_message": error_message,
+                    "alternative_model": alternative_model if alternative_model else None
+                }
+                
+                # Force a re-run to immediately update the UI with error details
+                # This is critical to ensure error UI is rendered correctly
+                st.rerun()
+                
                 if coordinator_needs_change:
-                    result_placeholder.warning(f"""
-                    ### Coordinator Model Error: {error_type}
-                    
-                    The coordinator model `{coordinator_model}` returned an error.
-                    
-                    **Please select a different coordinator model** from the sidebar and try again.
-                    
-                    If this problem persists, try models from a different provider or wait a few minutes.
-                    """)
+                    if alternative_model:
+                        # Store the suggested alternative model in session state
+                        st.session_state.suggested_alt_model = alternative_model
+                        
+                        # Highlight the alternative model in the sidebar by modifying the list to put it first
+                        if 'coordinator_models' in st.session_state and alternative_model in st.session_state.coordinator_models:
+                            # Move the alternative model to the top of the list for visibility
+                            # First remove it from its current position
+                            st.session_state.coordinator_models.remove(alternative_model)
+                            # Then add it to the beginning
+                            st.session_state.coordinator_models.insert(0, alternative_model)
+                            
+                            # Update the process log
+                            if 'process_log' in st.session_state:
+                                st.session_state.process_log.append(f"📌 Suggested alternative model: {alternative_model}")
+                                
+                        # Display the error message
+                        result_placeholder.warning(f"""
+                        ### Coordinator Model Error: {error_type}
+                        
+                        The coordinator model `{coordinator_model}` returned an error.
+                        
+                        **Suggested alternative:** `{alternative_model}`
+                        """)
+                        
+                        # Add a visual note near the error message to direct user attention
+                        st.info(f"""
+                        **📝 Note:** A checkbox has been added to the query form to automatically use the suggested model.
+                        Please resubmit your query with the form below to use the alternative model.
+                        """)
+                    else:
+                        result_placeholder.warning(f"""
+                        ### Coordinator Model Error: {error_type}
+                        
+                        The coordinator model `{coordinator_model}` returned an error.
+                        
+                        **Please select a different coordinator model** from the sidebar and try again.
+                        
+                        If this problem persists, try models from a different provider or wait a few minutes.
+                        """)
                 else:
                     result_placeholder.warning(f"""
                     ### Coordinator Error: {error_type}

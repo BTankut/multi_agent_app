@@ -6,6 +6,7 @@ import requests
 import regex as re
 import time
 import traceback
+import inspect
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -150,10 +151,18 @@ def get_openrouter_models():
             logger.error(f"Unexpected error fetching OpenRouter models: {str(e)}")
             return []
 
-def call_agent(model_name, role, query, openrouter_models, conversation_history=None):
+def call_agent(model_name, role, query, openrouter_models, conversation_history=None, is_coordinator=False):
     """
     Calls an OpenRouter model with error handling and logging.
     Returns a tuple of (response_text, metadata) where metadata contains token usage and timing data.
+    
+    Args:
+        model_name: The OpenRouter model ID to use
+        role: The system role prompt
+        query: The user query
+        openrouter_models: List of available OpenRouter models
+        conversation_history: Previous conversation history (optional)
+        is_coordinator: Whether this model is being used as a coordinator (affects error handling)
     """
     start_time = time.time()
     token_usage = {"prompt": 0, "completion": 0, "total": 0}
@@ -246,6 +255,17 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                         # Handle different error codes based on OpenRouter docs
                         # See: https://openrouter.ai/docs/api-reference/errors
                         
+                        # List of critical errors that shouldn't be retried
+                        critical_errors = [400, 401, 402, 403, 404, 408, 429, 502, 503]
+                        
+                        # For coordinator models, don't retry on any OpenRouter errors
+                        if is_coordinator and error_code in critical_errors:
+                            logger.error(f"Coordinator model {model_name} returned error code {error_code}: {error_msg}")
+                            # Immediately raise a non-retryable error
+                            error_template = f"OPENROUTER_ERROR_{error_code}: {error_msg}"
+                            # Don't use retry logic, immediately pass up to our error handler
+                            return (f"Error: {error_template}", {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0})
+                        
                         # Handle rate limiting - 429 Too Many Requests
                         if error_code == 429:
                             logger.warning(f"Rate limit exceeded for {model_name}: {error_msg}")
@@ -266,6 +286,11 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                                 # Return a meaningful error message for other provider errors
                                 raise ValueError(f"Provider '{provider_name}' error with model {model_name}: {error_msg}")
                         
+                        # Handle service unavailable - 502 Bad Gateway (invalid JSON, etc)
+                        elif error_code == 502:
+                            logger.error(f"Service unavailable for {model_name}: {error_msg}")
+                            raise ValueError(f"Service unavailable: {error_msg}")
+                            
                         # Handle credit/payment issues - 402 Payment Required
                         elif error_code == 402:
                             logger.error(f"Credit requirement issue for {model_name}: {error_msg}")

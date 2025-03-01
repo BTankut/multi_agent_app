@@ -103,13 +103,18 @@ def get_models_by_labels(labels, option, openrouter_models, min_models=1, max_mo
 def select_optimized_models(matching_models, query_labels, openrouter_models):
     """
     Selects the most cost-effective models from the matching candidates.
-    Includes consideration for provider diversity.
+    Includes consideration for provider diversity and model family diversity.
+    Filters out beta/alpha models for stability.
     """
     if not openrouter_models:
         return []
 
     model_costs = []
     for model_name in matching_models:
+        # Skip beta/alpha models for stability
+        if ":beta" in model_name or ":alpha" in model_name:
+            continue
+            
         # Check if the model exists in our model_labels.json
         model_labels = get_labels_for_model(model_name)
         if not model_labels:
@@ -142,33 +147,59 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
                 # Extract provider for diversity bonus
                 provider = model_name.split('/')[0] if '/' in model_name else "unknown"
                 
+                # Extract model family
+                model_parts = model_name.split('/')
+                if len(model_parts) > 1:
+                    # Extract the first part of the model name (e.g., "claude-3" from "claude-3-sonnet")
+                    name_parts = model_parts[1].split('-')
+                    if len(name_parts) > 1:
+                        family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+                    else:
+                        family_key = f"{provider}/{name_parts[0]}"
+                else:
+                    family_key = model_name
+                
                 # Combined score (lower is better)
                 total_score = efficiency * 0.3 - relevance_score * 0.7
-                model_costs.append((model_name, total_score, provider))
+                model_costs.append((model_name, total_score, provider, family_key))
             except (KeyError, TypeError) as e:
                 logger.error(f"Error processing pricing for {model_name}: {e}")
-                model_costs.append((model_name, float('inf'), "unknown"))
+                model_costs.append((model_name, float('inf'), "unknown", "unknown"))
         else:
             # If model not found in OpenRouter, give it an infinite cost
             logger.warning(f"Model {model_name} not found in OpenRouter models")
             provider = model_name.split('/')[0] if '/' in model_name else "unknown"
-            model_costs.append((model_name, float('inf'), provider))
+            
+            # Extract model family for consistency
+            model_parts = model_name.split('/')
+            if len(model_parts) > 1:
+                name_parts = model_parts[1].split('-')
+                if len(name_parts) > 1:
+                    family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+                else:
+                    family_key = f"{provider}/{name_parts[0]}"
+            else:
+                family_key = model_name
+                
+            model_costs.append((model_name, float('inf'), provider, family_key))
 
     # Sort by score (lower is better)
     model_costs.sort(key=lambda x: x[1])
     
-    # Implement manual provider diversity by selecting from different providers
+    # Implement manual provider diversity and model family diversity
     provider_counts = {}
+    family_selected = set()
     optimized_models = []
     
-    for model, _, provider in model_costs:
-        # Skip if we've already selected too many models from this provider
-        if provider in provider_counts and provider_counts[provider] >= 2:
+    for model, _, provider, family_key in model_costs:
+        # Skip if we've already selected a model from this family or too many from this provider
+        if family_key in family_selected or provider_counts.get(provider, 0) >= 2:
             continue
             
-        # Add model and increment provider count
+        # Add model and update tracking
         optimized_models.append(model)
         provider_counts[provider] = provider_counts.get(provider, 0) + 1
+        family_selected.add(family_key)
     
     return optimized_models
 
@@ -200,29 +231,60 @@ def limit_models_per_provider(models, max_per_provider=2):
     """
     Limits the number of models from each provider to avoid rate limiting issues.
     Returns a list of models with at most max_per_provider models from each provider.
+    Also ensures model family diversity (avoids multiple models from same family).
+    Filters out beta models for stability.
     
     Example:
         - Input: ["anthropic/claude-3", "anthropic/claude-2", "google/gemini-1", "google/gemini-2", "google/gemini-3"]
-        - Output (with max_per_provider=2): ["anthropic/claude-3", "anthropic/claude-2", "google/gemini-1", "google/gemini-2"]
+        - Output (with max_per_provider=2): ["anthropic/claude-3", "google/gemini-1"]
     """
     if not models:
         return []
         
-    provider_counts = {}
+    provider_counts = {}      # Count by provider (e.g., "anthropic")
+    family_selected = set()   # Track which model families we've already selected
     diversified_models = []
     
+    # First pass - filter out beta models and sort by preference
+    stable_models = []
     for model in models:
+        # Skip beta/alpha models for stability
+        if ":beta" in model or ":alpha" in model:
+            continue
+            
+        # Add to stable models list
+        stable_models.append(model)
+    
+    # If filtering removed all models, revert to original list
+    if not stable_models and models:
+        stable_models = models
+    
+    # Now process the filtered models
+    for model in stable_models:
         # Extract provider from model name (assuming format is provider/model_name)
         provider = model.split('/')[0] if '/' in model else "unknown"
         
-        # Initialize provider count if not already present
-        if provider not in provider_counts:
-            provider_counts[provider] = 0
+        # Extract model family (e.g., "claude-3" from "anthropic/claude-3-sonnet")
+        model_parts = model.split('/')
+        if len(model_parts) > 1:
+            # Extract the first part of the model name (before any "-" character after the first "-")
+            # For example: claude-3-sonnet -> claude-3
+            name_parts = model_parts[1].split('-')
+            if len(name_parts) > 1:
+                family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+            else:
+                family_key = f"{provider}/{name_parts[0]}"
+        else:
+            family_key = model
             
-        # Add model if we haven't reached the limit for this provider
-        if provider_counts[provider] < max_per_provider:
-            diversified_models.append(model)
-            provider_counts[provider] += 1
+        # Skip if we've already selected from this model family or reached provider limit
+        if family_key in family_selected or provider_counts.get(provider, 0) >= max_per_provider:
+            continue
+            
+        # Add model and increment provider count
+        diversified_models.append(model)
+        provider_counts[provider] = provider_counts.get(provider, 0) + 1
+        family_selected.add(family_key)
             
     # Log the model selection for debugging
     logger.info(f"Selected {len(diversified_models)} models after applying provider diversity constraints")

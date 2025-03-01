@@ -98,13 +98,17 @@ multi_agent_app/
 - API integration complete with OpenRouter with provider diversity
 - Enhanced model capability detection via OpenRouter web page scraping
 - Intelligent model expertise classification from model descriptions
-- Error handling improved with enhanced retry logic and exponential backoff
-- UI refined with model update capabilities and improved user experience
+- Advanced error handling with improved coordinator model failure recovery
+- Robust coordinator model failover system with automatic alternative model suggestion
+- Streamlined UI for error states with clear recovery options
+- Enhanced model family diversity to prevent selecting multiple models from same family
+- Beta/alpha model filtering for improved stability
 - Provider diversity implemented to prevent rate limiting
 - Automatic model labels and roles updating system with strict consistency validation
 - Language consistency ensured across all models - always respond in query language
 - Robust etiket-rol tutarlılığı mekanizması with automatic validation
-- Fallback mechanism when specialized models aren't available
+- Smart multi-level fallback mechanism when specialized models aren't available
+- Graceful handling of OpenRouter API errors (429, 502, 503, etc.)
 - Tanımsız etiketleri otomatik temizleme mekanizması
 - Conversation history preservation for maintaining context
 - Automatic backup management with file rotation (5 most recent per type)
@@ -113,6 +117,7 @@ multi_agent_app/
 - Forms with automatic clearing for improved UX and cleaner interface
 - Simplified UI structure with responsive layout and progress indicators
 - Recent coordinator model tracking for quick selection of frequently used models
+- Smart session state management to handle Streamlit re-rendering challenges
 - Detailed conversation history with metadata and usage statistics
 - Improved formatting for costs with proper Turkish currency format (comma as decimal separator)
 - Fixed query text display to properly wrap long texts in UI
@@ -160,6 +165,8 @@ multi_agent_app/
 - Coordinator model should be excluded from agent selection
 - Model ID formats must match OpenRouter's format (provider/model-name)
 - Rate limiting may occur with multiple concurrent requests to the same provider
+- Beta/alpha models may be unstable and should be avoided when possible
+- Models from the same family (e.g., claude-3-sonnet and claude-3-haiku) offer less diverse insights
 - Some models have context length limitations that can affect long conversations
 - Error handling may need adjustment for specific API provider error formats
 - Streamlit session state requires careful management to prevent UI conflicts
@@ -174,15 +181,22 @@ multi_agent_app/
 - Implement budget controls with spending limits and alerts
 - Enhance query analysis for better label extraction
 - Add multimodal support for images and file uploads
+- Further refine model family detection for improved diversity
+- Implement model capability rating system to track model performance
+- Automatically detect and avoid problematic models based on error history
 - Extend model capability scraping with AI analysis of model descriptions
 - Use ML techniques to better classify model capabilities from web content
 - Support detection of more specialized capabilities (chemistry, biology, etc.)
+- Implement better alternatives to Streamlit for more robust UI control
 - Improve visualization of coordinator-agent interactions with interactive diagrams
+- Enhance error recovery with context-aware model selection for alternatives
+- Add smart model switching for query types (e.g., math queries to math experts)
 - Resolve remaining OpenRouter API issues with 'choices' not found errors
 - Add more comprehensive language detection and response validation
 - Further enhance model-role-label consistency with automated testing
 - Improve auto-fallback to general_assistant when specialized models unavailable
 - Create more comprehensive model compatibility tests and automatic compatibility checks
+- Add offline mode with cached responses for continued operation during API outages
 - Implement user preference settings persistence for coordinator model and options
 - Add model response caching for similar queries to reduce API costs
 - Enhance analytics for query patterns and model performance metrics

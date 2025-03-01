@@ -79,22 +79,75 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
     
     # Ask the coordinator model to analyze the query
     # Use the conversation history for the coordinator if available
-    response_tuple = call_agent(coordinator_model, "You are a helpful assistant.", prompt, openrouter_models, 
-                               conversation_history=coordinator_history)
-    
-    # Handle the new tuple return format from call_agent
-    response = None
-    if isinstance(response_tuple, tuple) and len(response_tuple) == 2:
-        response, metadata = response_tuple
-    else:
-        # Backward compatibility
-        response = response_tuple
-    
-    # Extract and validate the labels from the response
-    if response and isinstance(response, str) and not response.startswith("Error"):
-        extracted_labels = [label.strip().lower() for label in re.split(r'[,\s]+', response) if label.strip()]
-        validated_labels = [label for label in extracted_labels if label in available_labels]
-        return validated_labels
+    try:
+        # Explicitly mark that this is a coordinator model call
+        response_tuple = call_agent(coordinator_model, "You are a helpful assistant.", prompt, openrouter_models, 
+                                   conversation_history=coordinator_history, is_coordinator=True)
+        
+        # Handle the new tuple return format from call_agent
+        response = None
+        if isinstance(response_tuple, tuple) and len(response_tuple) == 2:
+            response, metadata = response_tuple
+        else:
+            # Backward compatibility
+            response = response_tuple
+        
+        # Check for specific OpenRouter error format we added to utils.py
+        if response and isinstance(response, str) and response.startswith("Error: OPENROUTER_ERROR_"):
+            error_parts = response.split(":")
+            if len(error_parts) >= 3:
+                error_code = error_parts[1].strip().split("_")[2]
+                error_message = ":".join(error_parts[2:]).strip()
+                logger.error(f"Coordinator received OpenRouter error {error_code}: {error_message}")
+                
+                # Pass the error upward with specific error code for better handling
+                raise ValueError(f"OpenRouter error {error_code}: {error_message}")
+        
+        # Continue with normal processing if no error
+        if response and isinstance(response, str) and not response.startswith("Error"):
+            extracted_labels = [label.strip().lower() for label in re.split(r'[,\s]+', response) if label.strip()]
+            validated_labels = [label for label in extracted_labels if label in available_labels]
+            return validated_labels
+            
+    except Exception as e:
+        error_str = str(e).lower()
+        # Check for specific OpenRouter error codes
+        if any(err in error_str for err in ["400", "401", "402", "403", "408", "429", "502", "503"]):
+            logger.error(f"Coordinator API error: {error_str}")
+            
+            # Try to find the last used coordinator model from history if available
+            recent_coordinator_models = []
+            try:
+                import os
+                import json
+                coord_history_file = "data/coordinator_history.json"
+                if os.path.exists(coord_history_file):
+                    with open(coord_history_file, 'r') as f:
+                        data = json.load(f)
+                        recent_coordinator_models = data.get('models', [])
+            except Exception as history_err:
+                logger.error(f"Failed to load coordinator history: {str(history_err)}")
+            
+            # Find an alternative model that is different from the current one
+            alt_model = None
+            if recent_coordinator_models:
+                for model in recent_coordinator_models:
+                    if model != coordinator_model:
+                        alt_model = model
+                        break
+            
+            # Provide informative error message including alternative model suggestion
+            error_msg = f"Coordinator model error: {str(e)}. "
+            if alt_model:
+                error_msg += f"Try using alternative coordinator model: {alt_model}"
+            else:
+                error_msg += "Please select a different coordinator model and try again."
+            
+            # Raise the error to be handled in the app.py
+            raise ValueError(error_msg)
+        else:
+            # For other errors, continue to fallback
+            logger.warning(f"Coordinator model error: {str(e)}, using fallback method")
     
     # Fallback to basic label determination if the coordinator model fails
     logger.warning("Coordinator model failed to determine labels, using fallback method")
@@ -492,37 +545,100 @@ Important formatting notes:
             st.session_state.coordinator_messages = combined_input
             st.session_state.process_log.append(f"Synthesizing final answer with coordinator: {coordinator_model}")
         
-        # Call the coordinator for final synthesis
-        response_tuple = call_agent(coordinator_model, 
-                                 "You synthesize information from multiple sources.", 
-                                 combined_input, openrouter_models)
-        
-        # Handle the tuple return format
-        final_answer = None
-        coordinator_metadata = {}
-        
-        if isinstance(response_tuple, tuple) and len(response_tuple) == 2:
-            final_answer, coordinator_metadata = response_tuple
+        try:
+            # Call the coordinator for final synthesis
+            # Explicitly mark that this is a coordinator model call
+            response_tuple = call_agent(coordinator_model, 
+                                     "You synthesize information from multiple sources.", 
+                                     combined_input, openrouter_models,
+                                     is_coordinator=True)
             
-            # Add coordinator usage to the total
-            usage_data["models"]["coordinator"] = coordinator_metadata
-            usage_data["total_tokens"] += coordinator_metadata["tokens"]["total"]
-            usage_data["total_cost"] += coordinator_metadata["cost"]
-            usage_data["total_time"] += coordinator_metadata["time"]
+            # Handle the tuple return format
+            final_answer = None
+            coordinator_metadata = {}
             
-            # Log the coordinator usage
-            if 'process_log' in st.session_state:
-                token_info = coordinator_metadata["tokens"]
-                st.session_state.process_log.append(
-                    f"  • Coordinator usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
-                if coordinator_metadata["cost"] > 0:
-                    # Türkçe formatta virgül kullanarak göster
-                    # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
-                    cost_str = f"{coordinator_metadata['cost']:.6f}".rstrip('0').rstrip('.').replace(".", ",")
-                    st.session_state.process_log.append(f"  • Coordinator cost: ${cost_str}/1M tokens")
-        else:
-            # Backward compatibility
-            final_answer = response_tuple
+            # Check for specific OpenRouter error format we added to utils.py
+            if isinstance(response_tuple, tuple) and len(response_tuple) == 2:
+                response, coordinator_metadata = response_tuple
+                
+                # Check for OpenRouter error
+                if isinstance(response, str) and response.startswith("Error: OPENROUTER_ERROR_"):
+                    error_parts = response.split(":")
+                    if len(error_parts) >= 3:
+                        error_code = error_parts[1].strip().split("_")[2]
+                        error_message = ":".join(error_parts[2:]).strip()
+                        logger.error(f"Coordinator synthesis received OpenRouter error {error_code}: {error_message}")
+                        
+                        # Pass the error upward with specific error code for better handling
+                        raise ValueError(f"OpenRouter error {error_code}: {error_message}")
+                
+                # Regular processing for successful response
+                final_answer = response
+                
+                # Add coordinator usage to the total
+                usage_data["models"]["coordinator"] = coordinator_metadata
+                usage_data["total_tokens"] += coordinator_metadata["tokens"]["total"]
+                usage_data["total_cost"] += coordinator_metadata["cost"]
+                usage_data["total_time"] += coordinator_metadata["time"]
+                
+                # Log the coordinator usage
+                if 'process_log' in st.session_state:
+                    token_info = coordinator_metadata["tokens"]
+                    st.session_state.process_log.append(
+                        f"  • Coordinator usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
+                    if coordinator_metadata["cost"] > 0:
+                        # Türkçe formatta virgül kullanarak göster
+                        # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
+                        cost_str = f"{coordinator_metadata['cost']:.6f}".rstrip('0').rstrip('.').replace(".", ",")
+                        st.session_state.process_log.append(f"  • Coordinator cost: ${cost_str}/1M tokens")
+            else:
+                # Backward compatibility
+                final_answer = response_tuple
+                
+        except Exception as e:
+            error_str = str(e).lower()
+            # Check for specific OpenRouter error codes
+            if any(err in error_str for err in ["400", "401", "402", "403", "408", "429", "502", "503"]):
+                logger.error(f"Coordinator synthesis error: {error_str}")
+                
+                # Try to find the last used coordinator model from history if available
+                recent_coordinator_models = []
+                try:
+                    import os
+                    import json
+                    coord_history_file = "data/coordinator_history.json"
+                    if os.path.exists(coord_history_file):
+                        with open(coord_history_file, 'r') as f:
+                            data = json.load(f)
+                            recent_coordinator_models = data.get('models', [])
+                except Exception as history_err:
+                    logger.error(f"Failed to load coordinator history: {str(history_err)}")
+                
+                # Find an alternative model that is different from the current one
+                alt_model = None
+                if recent_coordinator_models:
+                    for model in recent_coordinator_models:
+                        if model != coordinator_model:
+                            alt_model = model
+                            break
+                
+                # Provide informative error message
+                error_msg = f"Coordinator synthesis error: {str(e)}. "
+                if alt_model:
+                    error_msg += f"Try using alternative coordinator model: {alt_model}"
+                else:
+                    error_msg += "Please select a different coordinator model and try again."
+                
+                # Raise the error to be handled in the app.py
+                raise ValueError(error_msg)
+            else:
+                # For other errors, respond with a simpler fallback
+                logger.warning(f"Coordinator synthesis error: {str(e)}, using fallback response")
+                
+                # Build a basic response from the agent responses
+                final_answer = f"Error synthesizing responses. Here are the individual agent responses:\n\n"
+                for agent, response in agent_responses.items():
+                    final_answer += f"--- {agent} ---\n{response}\n\n"
         
         if 'process_log' in st.session_state:
             st.session_state.process_log.append("Final answer synthesized successfully")
@@ -564,21 +680,60 @@ def process_query(query, coordinator_model, option, openrouter_models, coordinat
     if agent_history:
         updated_histories['agents'] = agent_history.copy()
     
-    # Step 1: Determine appropriate labels for the query
-    labels = determine_query_labels(query, coordinator_model, openrouter_models, 
-                                   coordinator_history=coordinator_history)
+    # Track if the coordinator model encounters any errors
+    coordinator_error_encountered = False
+    error_message = None
     
-    if not labels:
-        logger.warning("No labels determined for query")
-        labels = ["general_assistant"]  # Fallback to general_assistant label
+    try:
+        # Step 1: Determine appropriate labels for the query
+        labels = determine_query_labels(query, coordinator_model, openrouter_models, 
+                                       coordinator_history=coordinator_history)
+        
+        if not labels:
+            logger.warning("No labels determined for query")
+            labels = ["general_assistant"]  # Fallback to general_assistant label
+        
+        logger.info(f"Query labels: {labels}")
+        
+        # Step 2: Coordinate the agents to generate a response
+        final_answer, updated_agent_history = coordinate_agents(
+            query, coordinator_model, labels, openrouter_models, option,
+            agent_history=agent_history
+        )
+        
+    except ValueError as e:
+        error_str = str(e).lower()
+        # Check if this is a coordinator API error that we want to handle
+        if "openrouter error" in error_str or "coordinator model error" in error_str or "coordinator synthesis error" in error_str:
+            # This is a critical coordinator error that should be passed upward
+            coordinator_error_encountered = True
+            error_message = str(e)
+            
+            # Construct a basic response with the error information
+            labels = ["general_assistant"]  # Use default labels
+            final_answer = f"Error: {error_message}"
+            updated_agent_history = agent_history.copy() if agent_history else {}
+            
+            # Clearly show this as an error to the caller
+            raise ValueError(error_message)
+        else:
+            # For other ValueErrors, use a fallback approach
+            logger.error(f"Unexpected ValueError in process_query: {str(e)}")
+            labels = ["general_assistant"]
+            final_answer = f"An unexpected error occurred: {str(e)}"
+            updated_agent_history = agent_history.copy() if agent_history else {}
     
-    logger.info(f"Query labels: {labels}")
+    except Exception as e:
+        # Handle other unexpected errors
+        logger.error(f"Unexpected error in process_query: {str(e)}")
+        labels = ["general_assistant"]
+        final_answer = f"An unexpected error occurred: {str(e)}"
+        updated_agent_history = agent_history.copy() if agent_history else {}
     
-    # Step 2: Coordinate the agents to generate a response
-    final_answer, updated_agent_history = coordinate_agents(
-        query, coordinator_model, labels, openrouter_models, option,
-        agent_history=agent_history
-    )
+    # If there was a coordinator error, don't update the histories
+    # and just return the error message, keeping previous history intact
+    if coordinator_error_encountered:
+        return final_answer, labels, updated_histories
     
     # A completely fresh approach to conversation history
     # Start with a clean slate but preserve existing history if provided
