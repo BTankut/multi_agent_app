@@ -108,48 +108,37 @@ def get_model_description(model_id):
 def get_openrouter_models():
     """
     Fetches available models from OpenRouter API.
-    Includes retry logic for better reliability.
+    No retry logic - immediately return error if API call fails.
     """
     if not OPENROUTER_API_KEY:
         return []
     
-    max_retries = 2
-    retry_count = 0
-    backoff_factor = 1.5  # seconds
-    
-    while retry_count <= max_retries:
-        try:
-            headers = {
-                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
-                "Content-Type": "application/json"
-            }
-            
-            response = requests.get(
-                "https://openrouter.ai/api/v1/models",
-                headers=headers,
-                timeout=15  # Increased from 10 to 15 seconds
-            )
-            
-            response.raise_for_status()
-            models_data = response.json().get('data', [])
-            
-            # Log the number of models retrieved
-            logger.info(f"Successfully retrieved {len(models_data)} models from OpenRouter")
-            
-            return models_data
-            
-        except requests.exceptions.RequestException as e:
-            retry_count += 1
-            if retry_count <= max_retries:
-                sleep_time = backoff_factor * (2 ** (retry_count - 1))
-                logger.warning(f"Retry {retry_count}/{max_retries} for fetching models after {sleep_time}s due to: {str(e)}")
-                time.sleep(sleep_time)
-            else:
-                logger.error(f"Error fetching OpenRouter models after {max_retries} retries: {str(e)}")
-                return []
-        except Exception as e:
-            logger.error(f"Unexpected error fetching OpenRouter models: {str(e)}")
-            return []
+    try:
+        headers = {
+            "Authorization": f"Bearer {OPENROUTER_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        response = requests.get(
+            "https://openrouter.ai/api/v1/models",
+            headers=headers,
+            timeout=15
+        )
+        
+        response.raise_for_status()
+        models_data = response.json().get('data', [])
+        
+        # Log the number of models retrieved
+        logger.info(f"Successfully retrieved {len(models_data)} models from OpenRouter")
+        
+        return models_data
+        
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error fetching OpenRouter models: {str(e)}")
+        return []
+    except Exception as e:
+        logger.error(f"Unexpected error fetching OpenRouter models: {str(e)}")
+        return []
 
 def call_agent(model_name, role, query, openrouter_models, conversation_history=None, is_coordinator=False):
     """
@@ -215,174 +204,110 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
         # Log the API call attempt
         logger.info(f"Calling model: {model_name} with {len(messages)} messages")
         
-        # Make API request with retry logic
-        max_retries = 3  # Increased from 2 to 3
-        retry_count = 0
-        backoff_factor = 2  # Increased from 1 to 2 seconds
+        # No more retry logic - directly make the API call once
+        max_retries = 0  # No retries
+        retry_count = 0  # For tracking
         
-        while retry_count <= max_retries:
-            try:
-                # Make API request
-                response = requests.post(
-                    "https://openrouter.ai/api/v1/chat/completions",
-                    headers=headers,
-                    json={
-                        "model": model_name,
-                        "messages": messages
-                    },
-                    timeout=45  # Increased from 30 to 45 seconds
-                )
-                completion_time = time.time() - start_time
-                response.raise_for_status()
-                result = response.json()
-                
-                # More robust error handling
-                if not isinstance(result, dict):
-                    raise ValueError(f"Expected dict response, got {type(result).__name__}")
-                
-                # Check if choices exists in the response
-                if 'choices' not in result or not result['choices']:
-                    # Check if there's an error in the response
-                    if 'error' in result:
-                        error_details = result.get('error', {})
-                        error_msg = error_details.get('message', 'Unknown error')
-                        error_code = error_details.get('code', 'Unknown code')
-                        error_metadata = error_details.get('metadata', {})
-                        
-                        # Log detailed error information
-                        logger.error(f"API error response for {model_name}: {error_msg} (Code: {error_code})")
-                        
-                        # Handle different error codes based on OpenRouter docs
-                        # See: https://openrouter.ai/docs/api-reference/errors
-                        
-                        # List of critical errors that shouldn't be retried
-                        critical_errors = [400, 401, 402, 403, 404, 408, 429, 502, 503]
-                        
-                        # For coordinator models, don't retry on any OpenRouter errors
-                        if is_coordinator and error_code in critical_errors:
-                            logger.error(f"Coordinator model {model_name} returned error code {error_code}: {error_msg}")
-                            # Immediately raise a non-retryable error
-                            error_template = f"OPENROUTER_ERROR_{error_code}: {error_msg}"
-                            # Don't use retry logic, immediately pass up to our error handler
-                            return (f"Error: {error_template}", {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0})
-                        
-                        # Handle rate limiting - 429 Too Many Requests
-                        if error_code == 429:
-                            logger.warning(f"Rate limit exceeded for {model_name}: {error_msg}")
-                            # Just raise here to trigger the retry logic with backoff
-                            raise ValueError(f"Rate limit exceeded: {error_msg}")
-                            
-                        # Handle provider-specific errors - 503 Service Unavailable
-                        elif error_code == 503 and "Provider returned error" in error_msg:
-                            provider_name = error_metadata.get("provider_name", "unknown")
-                            logger.error(f"Provider '{provider_name}' error for {model_name}. Response keys: {list(result.keys())}")
-                            
-                            # If this is a Featherless provider (sao10k models), use special handling
-                            if provider_name == "Featherless" and "sao10k" in model_name:
-                                logger.error(f"Known Featherless provider issue with model {model_name}")
-                                # Return a more specific error message that can be caught by coordinator
-                                raise ValueError(f"PROVIDER_SPECIFIC_ERROR: {model_name}")
-                            else:
-                                # Return a meaningful error message for other provider errors
-                                raise ValueError(f"Provider '{provider_name}' error with model {model_name}: {error_msg}")
-                        
-                        # Handle service unavailable - 502 Bad Gateway (invalid JSON, etc)
-                        elif error_code == 502:
-                            logger.error(f"Service unavailable for {model_name}: {error_msg}")
-                            raise ValueError(f"Service unavailable: {error_msg}")
-                            
-                        # Handle credit/payment issues - 402 Payment Required
-                        elif error_code == 402:
-                            logger.error(f"Credit requirement issue for {model_name}: {error_msg}")
-                            raise ValueError(f"Insufficient credits for model {model_name}: {error_msg}")
-                        
-                        # Handle not found errors - 404 Not Found
-                        elif error_code == 404:
-                            logger.error(f"Model not found: {model_name}")
-                            raise ValueError(f"Model {model_name} not found or no longer available")
-                        
-                        # Handle validation errors - 400 Bad Request, 422 Unprocessable Entity
-                        elif error_code in [400, 422]:
-                            logger.error(f"Validation error for {model_name}: {error_msg}")
-                            raise ValueError(f"Validation error: {error_msg}")
-                            
-                        # Handle auth errors - 401 Unauthorized, 403 Forbidden
-                        elif error_code in [401, 403]:
-                            logger.error(f"Authentication error: {error_msg}")
-                            raise ValueError(f"Authentication error: {error_msg}")
-                            
-                        # General error handling for other codes
-                        else:
-                            raise KeyError(f"API error ({error_code}): {error_msg}")
+        try:
+            # Make API request
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=headers,
+                json={
+                    "model": model_name,
+                    "messages": messages
+                },
+                timeout=45
+            )
+            completion_time = time.time() - start_time
+            response.raise_for_status()
+            result = response.json()
+            
+            # More robust error handling
+            if not isinstance(result, dict):
+                raise ValueError(f"Expected dict response, got {type(result).__name__}")
+            
+            # Check if choices exists in the response
+            if 'choices' not in result or not result['choices']:
+                # Check if there's an error in the response
+                if 'error' in result:
+                    error_details = result.get('error', {})
+                    error_msg = error_details.get('message', 'Unknown error')
+                    error_code = error_details.get('code', 'Unknown code')
+                    error_metadata = error_details.get('metadata', {})
                     
-                    # No specific error information - log the response structure
-                    error_msg = "'choices' not found in response or empty"
-                    logger.error(f"{error_msg}. Response keys: {list(result.keys())}")
+                    # Log detailed error information
+                    logger.error(f"API error response for {model_name}: {error_msg} (Code: {error_code})")
                     
-                    # Check if response contains user_id but no choices (common with some API errors)
-                    if 'user_id' in result:
-                        logger.warning(f"Response contains user_id but no choices - likely a provider error")
-                        # This might be a special case provider error without proper error structure
-                        raise ValueError(f"Provider returned incomplete response for {model_name}")
-                    else:
-                        raise KeyError(error_msg)
+                    # Immediately return error without retry attempts
+                    error_template = f"OPENROUTER_ERROR_{error_code}: {error_msg}"
+                    return (f"Error: {error_template}", {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0})
                 
-                if not result['choices'][0].get('message', {}).get('content'):
-                    raise KeyError("No content found in response message")
+                # No specific error information - log the response structure
+                error_msg = "'choices' not found in response or empty"
+                logger.error(f"{error_msg}. Response keys: {list(result.keys())}")
                 
-                # Extract token usage info if available
-                if 'usage' in result:
-                    usage = result['usage']
-                    token_usage = {
-                        "prompt": usage.get('prompt_tokens', 0),
-                        "completion": usage.get('completion_tokens', 0),
-                        "total": usage.get('total_tokens', 0)
-                    }
-                    
-                    # Calculate cost if pricing information is available
-                    if pricing:
-                        # Get per-million token costs
-                        prompt_cost_per_million = float(pricing.get('prompt', 0))
-                        completion_cost_per_million = float(pricing.get('completion', 0))
-                        
-                        # Calculate costs directly for each token type, then display per million
-                        prompt_cost = (prompt_cost_per_million / 1000000) * token_usage["prompt"]
-                        completion_cost = (completion_cost_per_million / 1000000) * token_usage["completion"]
-                        
-                        # Calculate actual cost
-                        actual_cost = prompt_cost + completion_cost
-                        
-                        # Convert to per-million for display
-                        if token_usage["total"] > 0:
-                            # Display as cost per million tokens
-                            cost_per_token = actual_cost / token_usage["total"]
-                            # Ölçeği artıralım ki çok küçük değerler 0.00 olarak görünmesin
-                            cost = cost_per_token * 1000000
-                            # Yuvarlama yapmadan tam değeri kullan, sadece çok küçük değerler için alt sınır koy
-                            if 0 < cost < 0.000001:
-                                cost = 0.000001
-                        else:
-                            # Fallback if no tokens (shouldn't happen but just in case)
-                            cost = (prompt_cost_per_million + completion_cost_per_million) / 2
-                        
-                content = result['choices'][0]['message']['content']
-                return (content, {
-                    "tokens": token_usage,
-                    "time": completion_time,
-                    "cost": cost,
-                    "model": model_name
-                })
-                
-            except (requests.exceptions.RequestException, KeyError, ValueError) as e:
-                retry_count += 1
-                if retry_count <= max_retries:
-                    # Exponential backoff
-                    sleep_time = backoff_factor * (2 ** (retry_count - 1))
-                    logger.warning(f"Retry {retry_count}/{max_retries} for {model_name} after {sleep_time}s due to: {str(e)}")
-                    time.sleep(sleep_time)
+                # Check if response contains user_id but no choices (common with some API errors)
+                if 'user_id' in result:
+                    logger.warning(f"Response contains user_id but no choices - likely a provider error")
+                    # Return error immediately
+                    return (f"Error: Provider returned incomplete response for {model_name}", 
+                           {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0})
                 else:
-                    # All retries failed
-                    raise
+                    return (f"Error: {error_msg}", 
+                           {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0})
+            
+            if not result['choices'][0].get('message', {}).get('content'):
+                return (f"Error: No content found in response message", 
+                       {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0})
+            
+            # Extract token usage info if available
+            if 'usage' in result:
+                usage = result['usage']
+                token_usage = {
+                    "prompt": usage.get('prompt_tokens', 0),
+                    "completion": usage.get('completion_tokens', 0),
+                    "total": usage.get('total_tokens', 0)
+                }
+                
+                # Calculate cost if pricing information is available
+                if pricing:
+                    # Get per-million token costs
+                    prompt_cost_per_million = float(pricing.get('prompt', 0))
+                    completion_cost_per_million = float(pricing.get('completion', 0))
+                    
+                    # Calculate costs directly for each token type, then display per million
+                    prompt_cost = (prompt_cost_per_million / 1000000) * token_usage["prompt"]
+                    completion_cost = (completion_cost_per_million / 1000000) * token_usage["completion"]
+                    
+                    # Calculate actual cost
+                    actual_cost = prompt_cost + completion_cost
+                    
+                    # Convert to per-million for display
+                    if token_usage["total"] > 0:
+                        # Display as cost per million tokens
+                        cost_per_token = actual_cost / token_usage["total"]
+                        # Ölçeği artıralım ki çok küçük değerler 0.00 olarak görünmesin
+                        cost = cost_per_token * 1000000
+                        # Yuvarlama yapmadan tam değeri kullan, sadece çok küçük değerler için alt sınır koy
+                        if 0 < cost < 0.000001:
+                            cost = 0.000001
+                    else:
+                        # Fallback if no tokens (shouldn't happen but just in case)
+                        cost = (prompt_cost_per_million + completion_cost_per_million) / 2
+                    
+            content = result['choices'][0]['message']['content']
+            return (content, {
+                "tokens": token_usage,
+                "time": completion_time,
+                "cost": cost,
+                "model": model_name
+            })
+            
+        except (requests.exceptions.RequestException, KeyError, ValueError) as e:
+            # Immediately return error without retry
+            logger.error(f"Error calling {model_name}: {str(e)}")
+            return (f"Error: {str(e)}", {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0})
         
     except requests.exceptions.Timeout:
         logger.error(f"Timeout error calling {model_name}")

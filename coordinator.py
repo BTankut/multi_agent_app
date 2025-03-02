@@ -141,7 +141,9 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
             if alt_model:
                 error_msg += f"Try using alternative coordinator model: {alt_model}"
             else:
-                error_msg += "Please select a different coordinator model and try again."
+                # Hardcoded fallback if we can't find an alternative in history
+                alt_model = "google/gemini-2.0-pro-exp-02-05:free"
+                error_msg += f"Try using alternative coordinator model: {alt_model}"
             
             # Raise the error to be handled in the app.py
             raise ValueError(error_msg)
@@ -627,7 +629,9 @@ Important formatting notes:
                 if alt_model:
                     error_msg += f"Try using alternative coordinator model: {alt_model}"
                 else:
-                    error_msg += "Please select a different coordinator model and try again."
+                    # Hardcoded fallback if we can't find an alternative in history
+                    alt_model = "google/gemini-2.0-pro-exp-02-05:free"
+                    error_msg += f"Try using alternative coordinator model: {alt_model}"
                 
                 # Raise the error to be handled in the app.py
                 raise ValueError(error_msg)

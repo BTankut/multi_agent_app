@@ -779,6 +779,10 @@ def main():
                         # Model bilgilerini daha tutarlı bir şekilde gösterelim
                         st.markdown("**🤖 Models:**")
                         
+                        # Coordinator model'i en başta göster
+                        if coordinator_model:
+                            st.markdown(f"- Coordinator: {coordinator_model}")
+                        
                         # Her bir model için ayrı ayrı markdown satırları oluşturalım
                         for model in unique_models:
                             model_text = f"- {model}"
