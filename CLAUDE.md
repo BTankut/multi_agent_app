@@ -103,6 +103,8 @@ multi_agent_app/
 - Parallel API calls to agents for significantly faster response times
 - Staggered API requests by provider to reduce rate limiting errors
 - Enhanced rate limit detection and user-friendly error messages
+- Optimized model prompts with structured response formats for faster processing
+- Reduced token usage through concise instructions and response templates
 - Streamlined UI for error states with clear recovery options
 - Enhanced model family diversity to prevent selecting multiple models from same family
 - Improved model family detection logic for variants of same model family (dolphin, claude, mistral, llama)

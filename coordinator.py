@@ -602,14 +602,18 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
         combined_input = f"Original Query: {query}\n\n"
         for agent, response in agent_responses.items():
             combined_input += f"Agent {agent}: {response}\n\n"
-        combined_input += """Based on these responses, provide a single, consolidated answer.
+        combined_input += """Based on these responses, provide a single, concise, consolidated answer.
 
-Important formatting notes:
-1. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.) in your answer.
-2. Present math formulas in a plain text format that is readable (use * for multiplication, / for division).
-3. If you need to format an equation, use simple text formatting (e.g., "x = 5" instead of "$x = 5$").
-4. If you need to highlight an answer, use markdown boldface (e.g., **12**) instead of \\boxed{12}.
-5. Always respond in the same language as the original user query."""
+Follow these guidelines:
+1. Be very direct and to the point - users value brevity.
+2. Prioritize the most relevant information first.
+3. Maintain the structured format from agent responses when appropriate.
+4. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.).
+5. Present math formulas in plain text format (use * for multiplication, / for division).
+6. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}.
+7. Use bullet points for multiple items rather than paragraphs.
+8. Skip pleasantries and unnecessary explanations.
+9. Always respond in the same language as the original user query."""
         
         # Store the coordinator messages for UI display
         if 'coordinator_messages' in st.session_state:
