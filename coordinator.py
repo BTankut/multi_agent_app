@@ -551,6 +551,8 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                         if 'process_log' in st.session_state:
                             st.session_state.process_log.append(f"Calling tiebreaker agent: {tiebreaker_model}")
                         
+                        # Ensure call_agent is properly imported here
+                        from utils import call_agent
                         tiebreaker_response_tuple = call_agent(tiebreaker_model, tiebreaker_role, tiebreaker_prompt, openrouter_models)
                         
                         # Handle the tuple return format for tiebreaker
@@ -616,6 +618,8 @@ Important formatting notes:
         
         try:
             # Call the coordinator for final synthesis
+            # Ensure call_agent is properly imported here
+            from utils import call_agent
             # Explicitly mark that this is a coordinator model call
             response_tuple = call_agent(coordinator_model, 
                                      "You synthesize information from multiple sources.", 
