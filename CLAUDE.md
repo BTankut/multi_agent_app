@@ -49,6 +49,11 @@ multi_agent_app/
   │   ├── model_labels.json # Model capabilities metadata
   │   ├── model_roles.json  # System prompts for different roles
   │   └── backups/          # Automatic backups of configuration files
+  ├── logs/                 # Application logs directory
+  │   ├── app_{date}.log    # General application logs (INFO level)
+  │   ├── dev_{date}.log    # Detailed developer logs (DEBUG level)
+  │   ├── conversation_{id}.json # Full conversation logs in JSON format
+  │   └── error_{id}.json   # Detailed error logs with context
   ├── update_model_labels.py # Updates model list from OpenRouter API
   ├── update_model_roles.py  # Syncs model roles with current labels
   ├── api_test.py            # Tests API connectivity to models
@@ -133,6 +138,11 @@ multi_agent_app/
 - Fixed query text display to properly wrap long texts in UI
 - Enhanced model information display with consistent typography and formatting
 - Accurate cost representation without rounding issues
+- Comprehensive logging system with multiple log levels (app_{date}.log, dev_{date}.log)
+- Structured session tracking with unique session IDs
+- Detailed JSON error logs with stack traces and context
+- Complete conversation logs in JSON format for debugging and analysis (conversation_{id}.json)
+- Fixed cost display logic for optimized and paid model selections
 
 ## Development Notes
 
@@ -167,6 +177,10 @@ multi_agent_app/
 - Inspect API calls and model selection: See 'Process Log' in the UI for detailed traces
 - Track token usage: View the agent information panel for token counts and costs
 - Debug UI issues: Check Streamlit logs with `streamlit run app.py --log_level=debug`
+- View application logs: Check `logs/app_{date}.log` for general operation logs
+- Analyze detailed logs: Check `logs/dev_{date}.log` for detailed function-level logs
+- Examine conversation data: Inspect `logs/conversation_{id}.json` for complete conversation records
+- Review error context: Review `logs/error_{id}.json` for detailed error information
 
 ### Common Issues
 

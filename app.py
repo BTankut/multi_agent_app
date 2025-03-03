@@ -775,7 +775,7 @@ def main():
                             usage = st.session_state.usage_data
                             st.markdown("**📊 Usage Statistics:**")
                             st.markdown(f"- Total tokens: **{usage['total_tokens']}**")
-                            if usage['total_cost'] > 0:
+                            if usage['total_cost'] > 0 or option == "optimized" or option == "paid":
                                 # Türkçe formatta virgül kullanarak göster (ondalık için virgül)
                                 # En fazla 6 ondalık basamak gösterelim
                                 # Ancak sonda gereksiz 0'lar olmasın
