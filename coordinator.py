@@ -513,7 +513,11 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
         st.session_state.process_log.append(f"📊 Total usage: {usage_data['total_tokens']} tokens, {cost_info}, {usage_data['total_time']:.2f} seconds")
     
     # Special handling for code/math queries - check for conflicts
-    if ("code_expert" in labels or "math_expert" in labels) and len(selected_models) > 1:
+    # Also handle agent error scenarios by skipping conflict resolution if there are errors
+    has_errors = any("Error:" in str(response) or "unavailable" in str(response) or "rate limit" in str(response).lower() 
+                    for response in agent_responses.values())
+    
+    if not has_errors and ("code_expert" in labels or "math_expert" in labels) and len(selected_models) > 1:
         responses = list(agent_responses.values())
         if responses:
             first_response = responses[0]

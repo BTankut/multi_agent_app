@@ -330,6 +330,17 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                     
                     # Immediately return error without retry attempts
                     error_template = f"OPENROUTER_ERROR_{error_code}: {error_msg}"
+                    
+                    # Return a more user-friendly message for 524 errors ("provider returned error")
+                    if error_code == '524':
+                        return (f"The model {model_name} is currently unavailable. Provider returned an error.", 
+                               {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0, "error_code": error_code})
+                               
+                    # Special handling for 429 (rate limit) errors
+                    if error_code == '429':
+                        return (f"Rate limit exceeded for {model_name}. Please try again later or use a different model.", 
+                               {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0, "error_code": error_code})
+                    
                     return (f"Error: {error_template}", {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0})
                 
                 # No specific error information - log the response structure
