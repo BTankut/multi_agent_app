@@ -7,6 +7,7 @@ import regex as re
 import time
 import traceback
 import inspect
+import concurrent.futures
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -139,6 +140,62 @@ def get_openrouter_models():
     except Exception as e:
         logger.error(f"Unexpected error fetching OpenRouter models: {str(e)}")
         return []
+
+def call_agents_parallel(model_names, model_roles, query, openrouter_models, agent_histories=None):
+    """
+    Calls multiple OpenRouter models in parallel using ThreadPoolExecutor.
+    Returns a dictionary of model_name -> (response_text, metadata).
+    
+    Args:
+        model_names: List of OpenRouter model IDs to use
+        model_roles: Dictionary mapping model_name to system role prompt
+        query: The user query
+        openrouter_models: List of available OpenRouter models
+        agent_histories: Dictionary mapping model_name to conversation history (optional)
+    """
+    results = {}
+    
+    # Define a worker function for ThreadPoolExecutor
+    def call_worker(model_name):
+        role = model_roles.get(model_name, "You are a general-purpose assistant.")
+        history = agent_histories.get(model_name) if agent_histories else None
+        
+        try:
+            # Call the existing call_agent function
+            response_tuple = call_agent(model_name, role, query, openrouter_models, conversation_history=history)
+            return model_name, response_tuple
+        except Exception as e:
+            logger.error(f"Error in parallel call to {model_name}: {str(e)}")
+            error_metadata = {
+                "tokens": {"prompt": 0, "completion": 0, "total": 0},
+                "cost": 0.0,
+                "time": 0.0,
+                "error": str(e)
+            }
+            return model_name, (f"Error calling {model_name}: {str(e)}", error_metadata)
+    
+    # Use ThreadPoolExecutor to make concurrent API calls
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        # Submit all tasks
+        future_to_model = {executor.submit(call_worker, model_name): model_name for model_name in model_names}
+        
+        # Process results as they complete
+        for future in concurrent.futures.as_completed(future_to_model):
+            try:
+                model_name, response_tuple = future.result()
+                results[model_name] = response_tuple
+            except Exception as e:
+                model_name = future_to_model[future]
+                logger.error(f"Exception in thread for {model_name}: {str(e)}")
+                error_metadata = {
+                    "tokens": {"prompt": 0, "completion": 0, "total": 0},
+                    "cost": 0.0,
+                    "time": 0.0,
+                    "error": str(e)
+                }
+                results[model_name] = (f"Thread error for {model_name}: {str(e)}", error_metadata)
+    
+    return results
 
 def call_agent(model_name, role, query, openrouter_models, conversation_history=None, is_coordinator=False):
     """

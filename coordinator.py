@@ -294,139 +294,206 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
         "models": {}
     }
     
-    # Call each agent with its role
+    # Log that we're calling models in parallel
+    if 'process_log' in st.session_state:
+        st.session_state.process_log.append(f"📡 Calling {len(selected_models)} agents in parallel")
+        
+    # Prepare agent histories for parallel calls
+    agent_histories = {}
     for model_name in selected_models:
-        role = model_roles.get(model_name, "You are a general-purpose assistant.")
         if 'process_log' in st.session_state:
-            st.session_state.process_log.append(f"Calling agent: {model_name}")
-        
-        # Prepare conversation history for this agent if available
-        agent_conversation = None
+            st.session_state.process_log.append(f"Preparing call to agent: {model_name}")
+            
         if agent_history and model_name in agent_history:
-            agent_conversation = agent_history[model_name]
+            agent_histories[model_name] = agent_history[model_name]
             if 'process_log' in st.session_state:
-                st.session_state.process_log.append(f"Using conversation history with {len(agent_conversation)} messages for {model_name}")
+                st.session_state.process_log.append(f"  • Using conversation history with {len(agent_history[model_name])} messages")
+    
+    # Make parallel API calls to all models
+    try:
+        from utils import call_agents_parallel
+        parallel_results = call_agents_parallel(selected_models, model_roles, query, openrouter_models, agent_histories)
         
-        try:
-            # New version returns both response and metadata
-            response_tuple = call_agent(model_name, role, query, openrouter_models, conversation_history=agent_conversation)
-            
-            # Unpack the response
-            if isinstance(response_tuple, tuple) and len(response_tuple) == 2:
-                response, metadata = response_tuple
-                
-                # Store the response
-                agent_responses[model_name] = response
-                
-                # Store in session state for UI display
-                if 'agent_responses' in st.session_state:
-                    st.session_state.agent_responses[model_name] = response
-                    if model_name not in st.session_state.selected_agents:
-                        st.session_state.selected_agents.append(model_name)
-                
-                # Update agent conversation history
-                if agent_conversation is None:
-                    # Initialize conversation history for this agent
-                    agent_conversation = []
-                
-                # Add the current exchange to the conversation history
-                agent_conversation.append({"role": "system", "content": role})
-                agent_conversation.append({"role": "user", "content": query})
-                agent_conversation.append({"role": "assistant", "content": response})
-                
-                # Update the agent history
-                updated_agent_history[model_name] = agent_conversation
-                
-                # Store usage statistics
-                usage_data["models"][model_name] = metadata
-                usage_data["total_tokens"] += metadata["tokens"]["total"]
-                usage_data["total_cost"] += metadata["cost"]
-                usage_data["total_time"] += metadata["time"]
-                
-                # Log usage data
-                if 'process_log' in st.session_state:
-                    token_info = metadata["tokens"]
-                    st.session_state.process_log.append(
-                        f"  • {model_name} usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
-                    if metadata["cost"] > 0:
-                        # Türkçe formatta virgül kullanarak göster
-                        # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
-                        cost_str = f"{metadata['cost']:.6f}".rstrip('0').rstrip('.').replace(".", ",")
-                        st.session_state.process_log.append(f"  • Estimated cost: ${cost_str}/1M tokens")
-            else:
-                # Old format fallback
-                agent_responses[model_name] = response_tuple
-                if 'agent_responses' in st.session_state:
-                    st.session_state.agent_responses[model_name] = response_tuple
-                
-        except ValueError as e:
-            error_str = str(e)
-            logger.error(f"ValueError with model {model_name}: {error_str}")
-            
-            # Special handling for known provider errors, particularly with sao10k models
-            if "PROVIDER_SPECIFIC_ERROR" in error_str and "sao10k" in model_name:
-                logger.warning(f"Detected provider issue with sao10k model {model_name}, trying alternative")
-                
-                # Try to use a known-good alternative from the same provider
-                alt_model_name = "sao10k/l3-lunaris-8b"  # Our reliable fallback model
-                
-                if 'process_log' in st.session_state:
-                    st.session_state.process_log.append(f"⚠️ Provider issue with {model_name}, trying {alt_model_name} instead")
-                
-                try:
-                    # Use the new version that returns metadata
-                    alt_response_tuple = call_agent(alt_model_name, role, query, openrouter_models)
+        # Process all results
+        for model_name, response_tuple in parallel_results.items():
+            try:
+                # Unpack the response
+                if isinstance(response_tuple, tuple) and len(response_tuple) == 2:
+                    response, metadata = response_tuple
                     
-                    # Unpack the response
-                    if isinstance(alt_response_tuple, tuple) and len(alt_response_tuple) == 2:
-                        alt_response, alt_metadata = alt_response_tuple
-                        fallback_name = f"{alt_model_name} (fallback)"
-                        
-                        # Store the response
-                        agent_responses[fallback_name] = alt_response
-                        
-                        # Store in session state for UI display
-                        if 'agent_responses' in st.session_state:
-                            st.session_state.agent_responses[fallback_name] = alt_response
-                            if alt_model_name not in st.session_state.selected_agents:
-                                st.session_state.selected_agents.append(alt_model_name)
-                        
-                        # Update agent conversation history for the fallback model
-                        alt_conversation = []
-                        
-                        # Add the current exchange to the conversation history
-                        alt_conversation.append({"role": "system", "content": role})
-                        alt_conversation.append({"role": "user", "content": query})
-                        alt_conversation.append({"role": "assistant", "content": alt_response})
-                        
-                        # Update the agent history
-                        updated_agent_history[alt_model_name] = alt_conversation
-                        
-                        # Store usage statistics
-                        usage_data["models"][fallback_name] = alt_metadata
-                        usage_data["total_tokens"] += alt_metadata["tokens"]["total"] 
-                        usage_data["total_cost"] += alt_metadata["cost"]
-                        usage_data["total_time"] += alt_metadata["time"]
-                    else:
-                        # Old format fallback
-                        fallback_name = f"{alt_model_name} (fallback)"
-                        agent_responses[fallback_name] = alt_response_tuple
-                        if 'agent_responses' in st.session_state:
-                            st.session_state.agent_responses[fallback_name] = alt_response_tuple
-                        
-                except Exception as alt_e:
-                    logger.error(f"Alternative model also failed: {alt_model_name} - {str(alt_e)}")
+                    # Store the response
+                    agent_responses[model_name] = response
+                    
+                    # Store in session state for UI display
+                    if 'agent_responses' in st.session_state:
+                        st.session_state.agent_responses[model_name] = response
+                        if model_name not in st.session_state.selected_agents:
+                            st.session_state.selected_agents.append(model_name)
+                    
+                    # Update agent conversation history
+                    agent_conversation = agent_histories.get(model_name, [])
+                    
+                    # Add the current exchange to the conversation history
+                    role = model_roles.get(model_name, "You are a general-purpose assistant.")
+                    agent_conversation.append({"role": "system", "content": role})
+                    agent_conversation.append({"role": "user", "content": query})
+                    agent_conversation.append({"role": "assistant", "content": response})
+                    
+                    # Update the agent history
+                    updated_agent_history[model_name] = agent_conversation
+                    
+                    # Store usage statistics
+                    usage_data["models"][model_name] = metadata
+                    usage_data["total_tokens"] += metadata["tokens"]["total"]
+                    usage_data["total_cost"] += metadata["cost"]
+                    usage_data["total_time"] += max(metadata["time"], usage_data["total_time"])  # Use max time instead of sum
+                    
+                    # Log usage data
                     if 'process_log' in st.session_state:
-                        st.session_state.process_log.append(f"❌ Fallback model {alt_model_name} also failed")
-            else:
-                # Log other errors
-                if 'process_log' in st.session_state:
-                    st.session_state.process_log.append(f"❌ Error with {model_name}: {error_str}")
+                        token_info = metadata["tokens"]
+                        st.session_state.process_log.append(
+                            f"  • {model_name} usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
+                        if metadata["cost"] > 0:
+                            # Türkçe formatta virgül kullanarak göster
+                            # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
+                            cost_str = f"{metadata['cost']:.6f}".rstrip('0').rstrip('.').replace(".", ",")
+                            st.session_state.process_log.append(f"  • Estimated cost: ${cost_str}/1M tokens")
+                else:
+                    # Old format fallback
+                    agent_responses[model_name] = response_tuple
+                    if 'agent_responses' in st.session_state:
+                        st.session_state.agent_responses[model_name] = response_tuple
+            
+            except ValueError as e:
+                error_str = str(e)
+                logger.error(f"ValueError processing response from {model_name}: {error_str}")
+                
+                # Special handling for known provider errors, particularly with sao10k models
+                if "PROVIDER_SPECIFIC_ERROR" in error_str and "sao10k" in model_name:
+                    logger.warning(f"Detected provider issue with sao10k model {model_name}, trying alternative")
                     
-        except Exception as e:
-            logger.error(f"Exception calling model {model_name}: {str(e)}")
+                    # Try to use a known-good alternative from the same provider
+                    alt_model_name = "sao10k/l3-lunaris-8b"  # Our reliable fallback model
+                    
+                    if 'process_log' in st.session_state:
+                        st.session_state.process_log.append(f"⚠️ Provider issue with {model_name}, trying {alt_model_name} instead")
+                    
+                    try:
+                        # Import call_agent here to fix potential reference error
+                        from utils import call_agent
+                        # Use the new version that returns metadata
+                        alt_response_tuple = call_agent(alt_model_name, model_roles.get(model_name, "You are a general-purpose assistant."), query, openrouter_models)
+                        
+                        # Unpack the response
+                        if isinstance(alt_response_tuple, tuple) and len(alt_response_tuple) == 2:
+                            alt_response, alt_metadata = alt_response_tuple
+                            fallback_name = f"{alt_model_name} (fallback)"
+                            
+                            # Store the response
+                            agent_responses[fallback_name] = alt_response
+                            
+                            # Store in session state for UI display
+                            if 'agent_responses' in st.session_state:
+                                st.session_state.agent_responses[fallback_name] = alt_response
+                                if alt_model_name not in st.session_state.selected_agents:
+                                    st.session_state.selected_agents.append(alt_model_name)
+                            
+                            # Update agent conversation history for the fallback model
+                            alt_conversation = []
+                            
+                            # Add the current exchange to the conversation history
+                            role = model_roles.get(model_name, "You are a general-purpose assistant.")
+                            alt_conversation.append({"role": "system", "content": role})
+                            alt_conversation.append({"role": "user", "content": query})
+                            alt_conversation.append({"role": "assistant", "content": alt_response})
+                            
+                            # Update the agent history
+                            updated_agent_history[alt_model_name] = alt_conversation
+                            
+                            # Store usage statistics
+                            usage_data["models"][fallback_name] = alt_metadata
+                            usage_data["total_tokens"] += alt_metadata["tokens"]["total"] 
+                            usage_data["total_cost"] += alt_metadata["cost"]
+                            usage_data["total_time"] = max(usage_data["total_time"], alt_metadata["time"])
+                        else:
+                            # Old format fallback
+                            fallback_name = f"{alt_model_name} (fallback)"
+                            agent_responses[fallback_name] = alt_response_tuple
+                            if 'agent_responses' in st.session_state:
+                                st.session_state.agent_responses[fallback_name] = alt_response_tuple
+                            
+                    except Exception as alt_e:
+                        logger.error(f"Alternative model also failed: {alt_model_name} - {str(alt_e)}")
+                        if 'process_log' in st.session_state:
+                            st.session_state.process_log.append(f"❌ Fallback model {alt_model_name} also failed")
+                else:
+                    # Log other errors
+                    if 'process_log' in st.session_state:
+                        st.session_state.process_log.append(f"❌ Error with {model_name}: {error_str}")
+                        
+            except Exception as e:
+                logger.error(f"Exception processing result for {model_name}: {str(e)}")
+                if 'process_log' in st.session_state:
+                    st.session_state.process_log.append(f"❌ Error with {model_name}: {str(e)}")
+                    
+    except Exception as e:
+        logger.error(f"Error in parallel API calls: {str(e)}")
+        if 'process_log' in st.session_state:
+            st.session_state.process_log.append(f"❌ Error in parallel API calls: {str(e)}")
+            
+        # Fallback to sequential execution if parallel fails
+        if 'process_log' in st.session_state:
+            st.session_state.process_log.append("⚠️ Falling back to sequential API calls")
+            
+        # Call each agent sequentially (original implementation)
+        for model_name in selected_models:
+            role = model_roles.get(model_name, "You are a general-purpose assistant.")
             if 'process_log' in st.session_state:
-                st.session_state.process_log.append(f"❌ Error with {model_name}: {str(e)}")
+                st.session_state.process_log.append(f"Calling agent: {model_name}")
+            
+            agent_conversation = agent_histories.get(model_name, None)
+            
+            try:
+                from utils import call_agent
+                response_tuple = call_agent(model_name, role, query, openrouter_models, conversation_history=agent_conversation)
+                
+                # Process response using same logic as above
+                if isinstance(response_tuple, tuple) and len(response_tuple) == 2:
+                    response, metadata = response_tuple
+                    agent_responses[model_name] = response
+                    
+                    if 'agent_responses' in st.session_state:
+                        st.session_state.agent_responses[model_name] = response
+                        if model_name not in st.session_state.selected_agents:
+                            st.session_state.selected_agents.append(model_name)
+                    
+                    if agent_conversation is None:
+                        agent_conversation = []
+                    
+                    agent_conversation.append({"role": "system", "content": role})
+                    agent_conversation.append({"role": "user", "content": query})
+                    agent_conversation.append({"role": "assistant", "content": response})
+                    
+                    updated_agent_history[model_name] = agent_conversation
+                    
+                    usage_data["models"][model_name] = metadata
+                    usage_data["total_tokens"] += metadata["tokens"]["total"]
+                    usage_data["total_cost"] += metadata["cost"]
+                    usage_data["total_time"] += metadata["time"]  # Sum for sequential
+                    
+                    if 'process_log' in st.session_state:
+                        token_info = metadata["tokens"]
+                        st.session_state.process_log.append(
+                            f"  • {model_name} usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
+                else:
+                    agent_responses[model_name] = response_tuple
+                    if 'agent_responses' in st.session_state:
+                        st.session_state.agent_responses[model_name] = response_tuple
+                
+            except Exception as model_e:
+                logger.error(f"Exception in sequential fallback for {model_name}: {str(model_e)}")
+                if 'process_log' in st.session_state:
+                    st.session_state.process_log.append(f"❌ Error with {model_name}: {str(model_e)}")
     
     # Store usage data in session state
     if 'usage_data' not in st.session_state:
