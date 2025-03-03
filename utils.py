@@ -466,7 +466,7 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
 
 def log_conversation(coordinator_messages, agent_messages, session_state=None):
     """
-    Records the full conversation flow to log files and updates the session state.
+    Records the full conversation flow to structured JSON log files and updates the session state.
     
     Args:
         coordinator_messages: Messages to/from the coordinator model
@@ -479,14 +479,6 @@ def log_conversation(coordinator_messages, agent_messages, session_state=None):
     # Create detailed conversation log
     logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
-    
-    # Write to conversation_log.txt for backward compatibility
-    with open("conversation_log.txt", "a") as log_file:
-        log_file.write(f"--- New Conversation ({timestamp}) ---\n")
-        log_file.write(f"Coordinator Messages:\n{json.dumps(coordinator_messages, indent=2)}\n")
-        for agent, messages in agent_messages.items():
-            log_file.write(f"Agent {agent} Messages:\n{json.dumps(messages, indent=2)}\n")
-        log_file.write("--- End of Conversation ---\n\n")
     
     # Create a structured JSON log with all details
     conversation_data = {
