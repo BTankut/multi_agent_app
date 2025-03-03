@@ -271,7 +271,7 @@ def call_agents_parallel(model_names, model_roles, query, openrouter_models, age
     logger.info(f"Completed parallel API calls for {len(results)} models")
     return results
 
-def call_agent(model_name, role, query, openrouter_models, conversation_history=None, is_coordinator=False):
+def call_agent(model_name, role, query, openrouter_models, conversation_history=None, is_coordinator=False, is_tiebreaker=False):
     """
     Calls an OpenRouter model with error handling and logging.
     Returns a tuple of (response_text, metadata) where metadata contains token usage and timing data.
@@ -283,6 +283,7 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
         openrouter_models: List of available OpenRouter models
         conversation_history: Previous conversation history (optional)
         is_coordinator: Whether this model is being used as a coordinator (affects error handling)
+        is_tiebreaker: Whether this model is being used as a dedicated tiebreaker (for conflict resolution)
     """
     start_time = time.time()
     token_usage = {"prompt": 0, "completion": 0, "total": 0}

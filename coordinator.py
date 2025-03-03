@@ -517,107 +517,193 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
     has_errors = any("Error:" in str(response) or "unavailable" in str(response) or "rate limit" in str(response).lower() 
                     for response in agent_responses.values())
     
-    if not has_errors and ("code_expert" in labels or "math_expert" in labels) and len(selected_models) > 1:
+    # Check for conflicts in all queries with multiple responses, not just code/math
+    if not has_errors and len(selected_models) > 1:
         responses = list(agent_responses.values())
+        models_list = list(agent_responses.keys())
+        
         if responses:
-            first_response = responses[0]
-            for resp in responses[1:]:
-                similarity_score = calculate_similarity(first_response, resp)
-                
-                if 'process_log' in st.session_state:
-                    st.session_state.process_log.append(f"Similarity check: score={similarity_score:.2f}")
-                
-                if similarity_score < 0.7:  # Threshold for significant difference
-                    if 'process_log' in st.session_state:
-                        st.session_state.process_log.append("Conflict detected between responses. Calling tiebreaker.")
+            # Detect conflicts - check if we have divergent responses
+            conflict_detected = False
+            similarity_scores = []
+            
+            # Check similarity between all pairs of responses
+            for i in range(len(responses)):
+                for j in range(i+1, len(responses)):
+                    similarity_score = calculate_similarity(responses[i], responses[j])
+                    similarity_scores.append((models_list[i], models_list[j], similarity_score))
                     
-                    # Call a tiebreaker model with reasoning expertise
-                    tiebreaker_models = get_models_by_labels(["reasoning_expert"], option, 
-                                                          openrouter_models, min_models=1, max_models=1)
-                    if tiebreaker_models:
-                        tiebreaker_model = tiebreaker_models[0]
+                    if 'process_log' in st.session_state:
+                        st.session_state.process_log.append(f"Similarity check between {models_list[i]} and {models_list[j]}: score={similarity_score:.2f}")
+                    
+                    if similarity_score < 0.7:  # Threshold for significant difference
+                        conflict_detected = True
+            
+            if conflict_detected:
+                if 'process_log' in st.session_state:
+                    st.session_state.process_log.append("🚨 Conflict detected between responses. Calling dedicated tiebreaker.")
+                
+                # Get a dedicated tiebreaker that isn't one of the models that already provided a response
+                all_reasoning_models = get_models_by_labels(["reasoning_expert"], option, openrouter_models)
+                
+                # Filter out models that have already provided responses
+                dedicated_tiebreakers = [model for model in all_reasoning_models if model not in models_list]
+                
+                # If no dedicated tiebreaker is available, try another expert model
+                if not dedicated_tiebreakers:
+                    dedicated_tiebreakers = get_models_by_labels(["general_assistant"], option, openrouter_models)
+                    dedicated_tiebreakers = [model for model in dedicated_tiebreakers if model not in models_list]
+                
+                if dedicated_tiebreakers:
+                    tiebreaker_model = dedicated_tiebreakers[0]
+                    if 'process_log' in st.session_state:
+                        st.session_state.process_log.append(f"Selected dedicated tiebreaker: {tiebreaker_model}")
+                    
+                    tiebreaker_role = get_model_roles([tiebreaker_model], ["reasoning_expert"])[tiebreaker_model]
+                    
+                    # Create a more comprehensive tiebreaker prompt that shows all responses
+                    tiebreaker_prompt = f"""# Tiebreaker Analysis Task
+
+I need you to analyze multiple conflicting answers from different AI models and determine the most correct answer.
+
+## Original Query:
+{query}
+
+## Agent Responses:
+"""
+                    
+                    # Add all responses to the tiebreaker prompt
+                    for i, (model, response) in enumerate(zip(models_list, responses)):
+                        tiebreaker_prompt += f"\n### Agent {i+1} ({model}):\n{response}\n"
+                    
+                    tiebreaker_prompt += """
+## Your Task:
+1. Carefully analyze each agent's response
+2. For logical or mathematical problems, work through the steps methodically
+3. When multiple answers conflict, determine which is correct and explain why
+4. Provide your own solution if all given answers are incorrect or incomplete
+
+## Response Format:
+- Begin with "ANALYSIS:" followed by your reasoning
+- Then "CONCLUSION:" with the final answer
+- Always respond in the same language as the original query
+"""
+                    if 'process_log' in st.session_state:
+                        st.session_state.process_log.append(f"Calling dedicated tiebreaker agent: {tiebreaker_model}")
+                    
+                    # Ensure call_agent is properly imported here
+                    from utils import call_agent
+                    
+                    # Add special flag to identify this as a tiebreaker call
+                    tiebreaker_response_tuple = call_agent(
+                        tiebreaker_model, 
+                        tiebreaker_role, 
+                        tiebreaker_prompt, 
+                        openrouter_models,
+                        is_tiebreaker=True  # Flag this as a tiebreaker for special handling
+                    )
+                    
+                    # Handle the tuple return format for tiebreaker
+                    tiebreaker_response = None
+                    if isinstance(tiebreaker_response_tuple, tuple) and len(tiebreaker_response_tuple) == 2:
+                        tiebreaker_response, tiebreaker_metadata = tiebreaker_response_tuple
+                        
+                        # Add tiebreaker usage to the total with dedicated tiebreaker label
+                        tiebreaker_key = f"{tiebreaker_model} (dedicated tiebreaker)"
+                        usage_data["models"][tiebreaker_key] = tiebreaker_metadata
+                        usage_data["total_tokens"] += tiebreaker_metadata["tokens"]["total"]
+                        usage_data["total_cost"] += tiebreaker_metadata["cost"]
+                        usage_data["total_time"] += tiebreaker_metadata["time"]
+                        
+                        # Log usage with enhanced information
                         if 'process_log' in st.session_state:
-                            st.session_state.process_log.append(f"Selected tiebreaker: {tiebreaker_model}")
+                            token_info = tiebreaker_metadata["tokens"]
+                            st.session_state.process_log.append(
+                                f"  • Dedicated tiebreaker usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
+                            st.session_state.process_log.append(
+                                f"  • Tiebreaker analyzed {len(responses)} conflicting responses")
+                    else:
+                        # Backward compatibility
+                        tiebreaker_response = tiebreaker_response_tuple
+                    
+                    if tiebreaker_response:
+                        # Use a clear label for the dedicated tiebreaker
+                        tiebreaker_key = f"{tiebreaker_model} (dedicated tiebreaker)"
+                        agent_responses[tiebreaker_key] = tiebreaker_response
                         
-                        tiebreaker_role = get_model_roles([tiebreaker_model], ["reasoning_expert"])[tiebreaker_model]
-                        tiebreaker_prompt = f"""These are conflicting answers from other agents:
-                        
-                        Agent 1: {responses[0]}
-                        
-                        Agent 2: {responses[1]}
-                        
-                        Original Query: {query}
-                        
-                        Determine which answer is correct or provide a better alternative.
-                        Always respond in the same language as the original user query.
-                        """
-                        
-                        if 'process_log' in st.session_state:
-                            st.session_state.process_log.append(f"Calling tiebreaker agent: {tiebreaker_model}")
-                        
-                        # Ensure call_agent is properly imported here
-                        from utils import call_agent
-                        tiebreaker_response_tuple = call_agent(tiebreaker_model, tiebreaker_role, tiebreaker_prompt, openrouter_models)
-                        
-                        # Handle the tuple return format for tiebreaker
-                        tiebreaker_response = None
-                        if isinstance(tiebreaker_response_tuple, tuple) and len(tiebreaker_response_tuple) == 2:
-                            tiebreaker_response, tiebreaker_metadata = tiebreaker_response_tuple
-                            
-                            # Add tiebreaker usage to the total
-                            usage_data["models"][tiebreaker_model + " (tiebreaker)"] = tiebreaker_metadata
-                            usage_data["total_tokens"] += tiebreaker_metadata["tokens"]["total"]
-                            usage_data["total_cost"] += tiebreaker_metadata["cost"]
-                            usage_data["total_time"] += tiebreaker_metadata["time"]
-                            
-                            # Log usage
-                            if 'process_log' in st.session_state:
-                                token_info = tiebreaker_metadata["tokens"]
-                                st.session_state.process_log.append(
-                                    f"  • Tiebreaker usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
-                        else:
-                            # Backward compatibility
-                            tiebreaker_response = tiebreaker_response_tuple
-                        
-                        if tiebreaker_response:
-                            agent_responses[tiebreaker_model + " (tiebreaker)"] = tiebreaker_response
-                            
-                            # Store in session state for UI display
-                            if 'agent_responses' in st.session_state:
-                                st.session_state.agent_responses[tiebreaker_model + " (tiebreaker)"] = tiebreaker_response
+                        # Store in session state for UI display with enhanced visibility
+                        if 'agent_responses' in st.session_state:
+                            st.session_state.agent_responses[tiebreaker_key] = tiebreaker_response
+                            # Add with special flag to highlight in UI
+                            if tiebreaker_model not in st.session_state.selected_agents:
                                 st.session_state.selected_agents.append(tiebreaker_model)
+                        
+                        # Update agent conversation history for tiebreaker
+                        tiebreaker_conversation = []
+                        
+                        # Add the current exchange to the conversation history
+                        tiebreaker_conversation.append({"role": "system", "content": tiebreaker_role})
+                        tiebreaker_conversation.append({"role": "user", "content": tiebreaker_prompt})
+                        tiebreaker_conversation.append({"role": "assistant", "content": tiebreaker_response})
+                        
+                        # Update the agent history
+                        updated_agent_history[tiebreaker_key] = tiebreaker_conversation
+                        
+                        # Log the successful tiebreaker resolution
+                        if 'process_log' in st.session_state:
+                            st.session_state.process_log.append(f"✅ Dedicated tiebreaker provided analysis and resolution")
                             
-                            # Update agent conversation history for tiebreaker
-                            tiebreaker_conversation = []
-                            tiebreaker_key = tiebreaker_model + " (tiebreaker)"
-                            
-                            # Add the current exchange to the conversation history
-                            tiebreaker_conversation.append({"role": "system", "content": tiebreaker_role})
-                            tiebreaker_conversation.append({"role": "user", "content": tiebreaker_prompt})
-                            tiebreaker_conversation.append({"role": "assistant", "content": tiebreaker_response})
-                            
-                            # Update the agent history
-                            updated_agent_history[tiebreaker_key] = tiebreaker_conversation
-                            
-                            break
+                        break
     
     # Generate final consolidated answer
     if agent_responses:
         combined_input = f"Original Query: {query}\n\n"
+        
+        # Check if we have a dedicated tiebreaker response
+        has_tiebreaker = any("dedicated tiebreaker" in agent_name for agent_name in agent_responses.keys())
+        
+        # Add agent responses with special emphasis on the tiebreaker if present
         for agent, response in agent_responses.items():
-            combined_input += f"Agent {agent}: {response}\n\n"
-        combined_input += """Based on these responses, provide a single, concise, consolidated answer.
+            # Highlight the tiebreaker response in the coordinator prompt
+            if "dedicated tiebreaker" in agent:
+                combined_input += f"### Tiebreaker Analysis ({agent}):\n{response}\n\n"
+            else:
+                combined_input += f"Agent {agent}: {response}\n\n"
+        
+        # Enhanced coordinator instructions with focus on tiebreaker if present
+        if has_tiebreaker:
+            combined_input += """## Synthesis Instructions
+
+Based on these responses, provide a single, concise, consolidated answer. 
+
+IMPORTANT: Give significant weight to the tiebreaker analysis, as it was specifically tasked with resolving conflicts between the other agents' responses.
 
 Follow these guidelines:
 1. Be very direct and to the point - users value brevity.
-2. Prioritize the most relevant information first.
-3. Maintain the structured format from agent responses when appropriate.
+2. When agents disagree, defer to the tiebreaker's conclusion.
+3. For logical or mathematical problems, ensure your final answer is consistent with proper reasoning.
 4. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.).
 5. Present math formulas in plain text format (use * for multiplication, / for division).
 6. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}.
 7. Use bullet points for multiple items rather than paragraphs.
 8. Skip pleasantries and unnecessary explanations.
 9. Always respond in the same language as the original user query."""
+        else:
+            combined_input += """## Synthesis Instructions
+
+Based on these responses, provide a single, concise, consolidated answer.
+
+Follow these guidelines:
+1. Be very direct and to the point - users value brevity.
+2. Prioritize the most relevant information first.
+3. For logical or mathematical problems, carefully evaluate conflicting answers to determine the correct one.
+4. Maintain the structured format from agent responses when appropriate.
+5. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.).
+6. Present math formulas in plain text format (use * for multiplication, / for division).
+7. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}.
+8. Use bullet points for multiple items rather than paragraphs.
+9. Skip pleasantries and unnecessary explanations.
+10. Always respond in the same language as the original user query."""
         
         # Store the coordinator messages for UI display
         if 'coordinator_messages' in st.session_state:
