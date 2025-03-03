@@ -112,6 +112,13 @@ multi_agent_app/
 - Reduced token usage through concise instructions and response templates
 - Improved error messages for common API errors (Provider errors, rate limits)
 - Enhanced conflict resolution to handle API error scenarios gracefully
+- Dedicated tiebreaker system that's always separate from agent models
+- Comprehensive tiebreaker analysis of all conflicting agent responses
+- Advanced logical problem solving in the tiebreaker prompt instructions
+- Special coordinator weighting of tiebreaker conclusions in final synthesis
+- Expanded conflict detection to all query types, not just code/math
+- Pairwise similarity checks between all agent responses for better conflict detection
+- Visual indicators in process log for tiebreaker operations and progress
 - Streamlined UI for error states with clear recovery options
 - Enhanced model family diversity to prevent selecting multiple models from same family
 - Improved model family detection logic for variants of same model family (dolphin, claude, mistral, llama)
@@ -189,12 +196,16 @@ multi_agent_app/
 - API timeouts can occur with heavy query load
 - Some models may return 'choices'/'user_id' errors from OpenRouter
 - Coordinator model should be excluded from agent selection
+- Tiebreaker models must be different from the models that provided agent responses
+- Logical problems may yield inconsistent answers due to different reasoning approaches
+- Tiebreaker analysis should be prioritized for logical/mathematical conflicts
 - Model ID formats must match OpenRouter's format (provider/model-name)
 - Rate limiting may occur with multiple concurrent requests to the same provider
 - Beta/alpha models may be unstable and should be avoided when possible
 - Models from the same family (e.g., claude-3-sonnet and claude-3-haiku) offer less diverse insights
 - Some models have context length limitations that can affect long conversations
 - Error handling may need adjustment for specific API provider error formats
+- Pairwise similarity checks between all model responses can be computationally intensive
 - Streamlit session state requires careful management to prevent UI conflicts
 - Conversation history can grow large and impact performance with extended use
 - Model-role consistency requires proper update order: first roles, then labels
