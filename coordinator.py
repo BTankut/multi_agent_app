@@ -578,14 +578,26 @@ I need you to analyze multiple conflicting answers from different AI models and 
                     
                     tiebreaker_prompt += """
 ## Your Task:
-1. Carefully analyze each agent's response
-2. For logical or mathematical problems, work through the steps methodically
-3. When multiple answers conflict, determine which is correct and explain why
-4. Provide your own solution if all given answers are incorrect or incomplete
+1. Carefully analyze each agent's response to identify their reasoning and conclusions
+2. For logical or mathematical problems, work through the steps methodically by evaluating all possible scenarios
+3. For problems with discrete possibilities, create a table showing all possible combinations of variables
+4. Verify each possibility against all stated conditions in the problem
+5. When multiple answers conflict, determine which is correct and explain why
+6. Provide your own independent solution if all given answers are incorrect or incomplete
+
+## For Logical Problems Specifically:
+- Test all possible combinations systematically, ensuring no valid combination is overlooked
+- When working with conditional statements (if-then statements), verify them carefully:
+  - "If A, then B" means when A is true, B must be true, but says nothing about when A is false
+  - "If A, then B" is logically equivalent to "Not B implies Not A"
+  - "If A, then B" does NOT mean "If B, then A" or "If Not A, then Not B" 
+- For each possibility, check whether ALL conditions are simultaneously satisfied
+- Consider edge cases and carefully examine the logical implications of each condition
 
 ## Response Format:
-- Begin with "ANALYSIS:" followed by your reasoning
-- Then "CONCLUSION:" with the final answer
+- Begin with "ANALYSIS:" followed by your step-by-step reasoning
+- Include a complete analysis showing which possibilities satisfy all conditions
+- Then "CONCLUSION:" with the final answer and brief justification
 - Always respond in the same language as the original query
 """
                     if 'process_log' in st.session_state:
@@ -652,8 +664,6 @@ I need you to analyze multiple conflicting answers from different AI models and 
                         # Log the successful tiebreaker resolution
                         if 'process_log' in st.session_state:
                             st.session_state.process_log.append(f"✅ Dedicated tiebreaker provided analysis and resolution")
-                            
-                        break
     
     # Generate final consolidated answer
     if agent_responses:
@@ -674,36 +684,58 @@ I need you to analyze multiple conflicting answers from different AI models and 
         if has_tiebreaker:
             combined_input += """## Synthesis Instructions
 
-Based on these responses, provide a single, concise, consolidated answer. 
+Based on these responses, provide a single, concise, consolidated answer.
 
-IMPORTANT: Give significant weight to the tiebreaker analysis, as it was specifically tasked with resolving conflicts between the other agents' responses.
+CRITICAL FOR LOGIC PUZZLES AND MULTI-CHOICE PROBLEMS:
+- DO NOT simply count votes or take the majority opinion
+- Prioritize responses that methodically test ALL possibilities or scenarios
+- Verify that the selected answer satisfies ALL conditions in the problem without contradiction
+- Pay special attention to the METHODOLOGY used rather than just the final answer
+- In logic problems with conditional statements, verify how each model interprets these implications
+- Choose the response with the most rigorous logical analysis, even if it's just from one model
+- For complex problems, first identify which models have done the most thorough analysis
 
-Follow these guidelines:
-1. Be very direct and to the point - users value brevity.
-2. When agents disagree, defer to the tiebreaker's conclusion.
-3. For logical or mathematical problems, ensure your final answer is consistent with proper reasoning.
-4. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.).
-5. Present math formulas in plain text format (use * for multiplication, / for division).
-6. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}.
-7. Use bullet points for multiple items rather than paragraphs.
-8. Skip pleasantries and unnecessary explanations.
-9. Always respond in the same language as the original user query."""
+TIEBREAKER GUIDANCE:
+- The tiebreaker model was specifically tasked with carefully analyzing all agent responses
+- Evaluate the tiebreaker's reasoning process independently - is it logically sound and complete?
+- If the tiebreaker's reasoning is strong and methodical, prioritize its conclusion
+- If the tiebreaker missed important cases in its analysis, prefer models with more complete reasoning
+
+REASONING APPROACH:
+1. Identify the models that performed the most systematic and thorough analysis
+2. Verify their analysis against all problem constraints and conditions
+3. Choose the answer with the strongest logical foundation, not the most popular one
+4. Ensure the selected solution doesn't create any contradictions or impossibilities
+5. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.)
+6. Present math formulas in plain text format (use * for multiplication, / for division)
+7. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}
+8. Be direct and concise in your final answer
+9. Always respond in the same language as the original user query"""
         else:
             combined_input += """## Synthesis Instructions
 
 Based on these responses, provide a single, concise, consolidated answer.
 
-Follow these guidelines:
-1. Be very direct and to the point - users value brevity.
-2. Prioritize the most relevant information first.
-3. For logical or mathematical problems, carefully evaluate conflicting answers to determine the correct one.
-4. Maintain the structured format from agent responses when appropriate.
-5. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.).
-6. Present math formulas in plain text format (use * for multiplication, / for division).
-7. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}.
-8. Use bullet points for multiple items rather than paragraphs.
-9. Skip pleasantries and unnecessary explanations.
-10. Always respond in the same language as the original user query."""
+CRITICAL FOR LOGIC PUZZLES AND MULTI-CHOICE PROBLEMS:
+- DO NOT simply count votes or take the majority opinion
+- Prioritize responses that methodically test ALL possibilities or scenarios
+- Verify that the selected answer satisfies ALL conditions in the problem without contradiction
+- Pay special attention to the METHODOLOGY used rather than just the final answer
+- In logic problems with conditional statements, verify how each model interprets these implications
+- Choose the response with the most rigorous logical analysis, even if it's just from one model
+- For complex problems, first identify which models have done the most thorough analysis
+
+REASONING APPROACH:
+1. Identify the models that performed the most systematic and thorough analysis
+2. Verify their analysis against all problem constraints and conditions
+3. Choose the answer with the strongest logical foundation, not the most popular one
+4. Ensure the selected solution doesn't create any contradictions or impossibilities
+5. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.)
+6. Present math formulas in plain text format (use * for multiplication, / for division)
+7. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}
+8. Be direct and concise in your final answer
+9. Skip pleasantries and unnecessary explanations
+10. Always respond in the same language as the original user query"""
         
         # Store the coordinator messages for UI display
         if 'coordinator_messages' in st.session_state:

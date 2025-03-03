@@ -115,7 +115,9 @@ multi_agent_app/
 - Dedicated tiebreaker system that's always separate from agent models
 - Comprehensive tiebreaker analysis of all conflicting agent responses
 - Advanced logical problem solving in the tiebreaker prompt instructions
-- Special coordinator weighting of tiebreaker conclusions in final synthesis
+- Quality-based evaluation that prioritizes methodological rigor over majority voting
+- Enhanced coordinator logic for handling logic puzzles and multi-choice problems
+- Special weighting system that values thorough logical analysis over popularity of answers
 - Expanded conflict detection to all query types, not just code/math
 - Pairwise similarity checks between all agent responses for better conflict detection
 - Visual indicators in process log for tiebreaker operations and progress
