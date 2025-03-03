@@ -710,8 +710,26 @@ Important formatting notes:
                 # For other errors, respond with a simpler fallback
                 logger.warning(f"Coordinator synthesis error: {str(e)}, using fallback response")
                 
-                # Build a basic response from the agent responses
-                final_answer = f"Error synthesizing responses. Here are the individual agent responses:\n\n"
+                # Check for rate limiting errors in agent responses
+                rate_limited = False
+                for response in agent_responses.values():
+                    if isinstance(response, str) and ("Rate limit exceeded" in response or "429" in response):
+                        rate_limited = True
+                        break
+                
+                if rate_limited:
+                    # If rate limiting was detected, provide more helpful message
+                    logger.warning("Detected rate limiting in individual agent responses, providing a specific message")
+                    final_answer = (
+                        "It appears we've hit rate limits with some of our API providers. "
+                        "This typically happens when making many requests in a short period. "
+                        "Here are the agent responses we did receive:\n\n"
+                    )
+                else:
+                    # Standard error synthesis
+                    final_answer = f"Error synthesizing responses. Here are the individual agent responses:\n\n"
+                
+                # Include all agent responses we received
                 for agent, response in agent_responses.items():
                     final_answer += f"--- {agent} ---\n{response}\n\n"
         

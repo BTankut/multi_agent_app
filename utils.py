@@ -154,6 +154,15 @@ def call_agents_parallel(model_names, model_roles, query, openrouter_models, age
         agent_histories: Dictionary mapping model_name to conversation history (optional)
     """
     results = {}
+    logger.info(f"Starting parallel API calls to {len(model_names)} models")
+    
+    # Create a mapping of models by provider to throttle per provider
+    models_by_provider = {}
+    for model_name in model_names:
+        provider = model_name.split('/')[0] if '/' in model_name else "unknown"
+        if provider not in models_by_provider:
+            models_by_provider[provider] = []
+        models_by_provider[provider].append(model_name)
     
     # Define a worker function for ThreadPoolExecutor
     def call_worker(model_name):
@@ -162,30 +171,52 @@ def call_agents_parallel(model_names, model_roles, query, openrouter_models, age
         
         try:
             # Call the existing call_agent function
+            logger.info(f"Parallel worker calling model: {model_name}")
             response_tuple = call_agent(model_name, role, query, openrouter_models, conversation_history=history)
+            logger.info(f"Parallel worker received response from: {model_name}")
             return model_name, response_tuple
         except Exception as e:
-            logger.error(f"Error in parallel call to {model_name}: {str(e)}")
-            error_metadata = {
-                "tokens": {"prompt": 0, "completion": 0, "total": 0},
-                "cost": 0.0,
-                "time": 0.0,
-                "error": str(e)
-            }
-            return model_name, (f"Error calling {model_name}: {str(e)}", error_metadata)
+            error_str = str(e)
+            logger.error(f"Error in parallel call to {model_name}: {error_str}")
+            
+            # Check for specific rate limiting error
+            if "429" in error_str or "rate limit" in error_str.lower():
+                # Mark as rate limited to potentially retry with backoff
+                error_metadata = {
+                    "tokens": {"prompt": 0, "completion": 0, "total": 0},
+                    "cost": 0.0,
+                    "time": 0.0,
+                    "error": f"RATE_LIMITED: {error_str}"
+                }
+                return model_name, (f"Rate limit exceeded for {model_name}. Consider using an alternative model.", error_metadata)
+            else:
+                error_metadata = {
+                    "tokens": {"prompt": 0, "completion": 0, "total": 0},
+                    "cost": 0.0,
+                    "time": 0.0,
+                    "error": error_str
+                }
+                return model_name, (f"Error calling {model_name}: {error_str}", error_metadata)
     
-    # Use ThreadPoolExecutor to make concurrent API calls
+    # Process each provider's models with slight delays between providers to avoid rate limits
+    all_futures = []
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        # Submit all tasks
-        future_to_model = {executor.submit(call_worker, model_name): model_name for model_name in model_names}
+        # Submit tasks by provider with small delays between providers
+        for provider, provider_models in models_by_provider.items():
+            logger.info(f"Submitting {len(provider_models)} models for provider: {provider}")
+            provider_futures = {executor.submit(call_worker, model_name): model_name for model_name in provider_models}
+            all_futures.extend(provider_futures.items())
+            
+            # Add a small delay between providers (100ms) to stagger requests
+            if len(models_by_provider) > 1:
+                time.sleep(0.1)
         
         # Process results as they complete
-        for future in concurrent.futures.as_completed(future_to_model):
+        for future, model_name in all_futures:
             try:
                 model_name, response_tuple = future.result()
                 results[model_name] = response_tuple
             except Exception as e:
-                model_name = future_to_model[future]
                 logger.error(f"Exception in thread for {model_name}: {str(e)}")
                 error_metadata = {
                     "tokens": {"prompt": 0, "completion": 0, "total": 0},
@@ -195,6 +226,7 @@ def call_agents_parallel(model_names, model_roles, query, openrouter_models, age
                 }
                 results[model_name] = (f"Thread error for {model_name}: {str(e)}", error_metadata)
     
+    logger.info(f"Completed parallel API calls for {len(results)} models")
     return results
 
 def call_agent(model_name, role, query, openrouter_models, conversation_history=None, is_coordinator=False):

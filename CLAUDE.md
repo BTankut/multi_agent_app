@@ -101,6 +101,8 @@ multi_agent_app/
 - Advanced error handling with improved coordinator model failure recovery
 - Robust coordinator model failover system with automatic alternative model suggestion
 - Parallel API calls to agents for significantly faster response times
+- Staggered API requests by provider to reduce rate limiting errors
+- Enhanced rate limit detection and user-friendly error messages
 - Streamlined UI for error states with clear recovery options
 - Enhanced model family diversity to prevent selecting multiple models from same family
 - Improved model family detection logic for variants of same model family (dolphin, claude, mistral, llama)
