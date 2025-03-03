@@ -744,7 +744,9 @@ Follow these guidelines:
         if 'process_log' in st.session_state:
             st.session_state.process_log.append("Final answer synthesized successfully")
         
-        log_conversation(combined_input, agent_responses)
+        # Pass session_state for more detailed logging
+        import streamlit as st
+        log_conversation(combined_input, agent_responses, session_state=st.session_state if 'st' in globals() else None)
         
         # Store usage data in session state
         if 'usage_data' in st.session_state:

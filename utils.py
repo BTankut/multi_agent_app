@@ -8,14 +8,56 @@ import time
 import traceback
 import inspect
 import concurrent.futures
+import sys
+from pathlib import Path
+from logging.handlers import RotatingFileHandler
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Logging configuration
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# Create logs directory if it doesn't exist
+logs_dir = Path("logs")
+logs_dir.mkdir(exist_ok=True)
+
+# Enhanced Logging configuration
+# Setup logger with both console and file handlers
+logger = logging.getLogger("multi_agent_app")
+logger.setLevel(logging.DEBUG)  # Set to DEBUG level to capture everything
+
+# Clear any existing handlers to avoid duplicates when reloading module
+if logger.handlers:
+    logger.handlers.clear()
+
+# Console handler with INFO level
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setLevel(logging.INFO)
+console_format = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(console_format)
+logger.addHandler(console_handler)
+
+# File handler with DEBUG level - allows for more verbose logs in the file
+today = datetime.datetime.now().strftime("%Y-%m-%d")
+file_handler = RotatingFileHandler(
+    logs_dir / f"app_{today}.log", 
+    maxBytes=10*1024*1024,  # 10MB
+    backupCount=5           # Keep up to 5 files
+)
+file_handler.setLevel(logging.DEBUG)
+file_format = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
+file_handler.setFormatter(file_format)
+logger.addHandler(file_handler)
+
+# Detailed debug logger for development
+dev_handler = RotatingFileHandler(
+    logs_dir / f"dev_{today}.log",
+    maxBytes=50*1024*1024,  # 50MB
+    backupCount=3           # Keep up to 3 files
+)
+dev_handler.setLevel(logging.DEBUG)
+dev_format = logging.Formatter('%(asctime)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s')
+dev_handler.setFormatter(dev_format)
+logger.addHandler(dev_handler)
 
 # Constants
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
@@ -422,23 +464,96 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
         return (f"Error: Unexpected error: {str(e)}",
                {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0})
 
-def log_conversation(coordinator_messages, agent_messages):
+def log_conversation(coordinator_messages, agent_messages, session_state=None):
     """
-    Records the full conversation flow to a log file and updates the session state.
+    Records the full conversation flow to log files and updates the session state.
+    
+    Args:
+        coordinator_messages: Messages to/from the coordinator model
+        agent_messages: Dictionary of agent responses
+        session_state: Optional Streamlit session state for UI logging
     """
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    conversation_id = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     
+    # Create detailed conversation log
+    logs_dir = Path("logs")
+    logs_dir.mkdir(exist_ok=True)
+    
+    # Write to conversation_log.txt for backward compatibility
     with open("conversation_log.txt", "a") as log_file:
         log_file.write(f"--- New Conversation ({timestamp}) ---\n")
         log_file.write(f"Coordinator Messages:\n{json.dumps(coordinator_messages, indent=2)}\n")
         for agent, messages in agent_messages.items():
             log_file.write(f"Agent {agent} Messages:\n{json.dumps(messages, indent=2)}\n")
         log_file.write("--- End of Conversation ---\n\n")
+    
+    # Create a structured JSON log with all details
+    conversation_data = {
+        "id": conversation_id,
+        "timestamp": timestamp,
+        "coordinator_messages": coordinator_messages,
+        "agent_messages": agent_messages,
+    }
+    
+    # Add session state information if available
+    if session_state:
+        # Capture relevant parts of session state that aren't too large
+        state_data = {}
+        for key in ["selected_agents", "process_log", "usage_data"]:
+            if key in session_state:
+                state_data[key] = session_state[key]
+        conversation_data["session_state"] = state_data
+    
+    # Save as individual JSON file for easier browsing and searching
+    conversation_file = logs_dir / f"conversation_{conversation_id}.json"
+    with open(conversation_file, "w") as json_file:
+        json.dump(conversation_data, json_file, indent=2)
+    
+    # Log to DEBUG for development
+    logger.debug(f"Saved conversation {conversation_id} to {conversation_file}")
+    
+    return conversation_id
 
-def handle_error(message, error_log_placeholder=None):
+def handle_error(message, error_log_placeholder=None, context=None):
     """
     Handles errors, logs them, and optionally displays them to the user.
+    
+    Args:
+        message: Error message to log and display
+        error_log_placeholder: Optional Streamlit placeholder for UI display
+        context: Optional dictionary with additional context about the error
     """
-    logger.error(message)
+    # Create detailed error log
+    error_id = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    
+    # Get detailed error context (stack trace, etc)
+    stack_trace = traceback.format_exc() if traceback.format_exc() != "NoneType: None\n" else "No stack trace available"
+    
+    # Log the error with detailed info for debugging
+    if context:
+        logger.error(f"Error {error_id}: {message} | Context: {json.dumps(context)}")
+        
+        # Save detailed error info to file
+        logs_dir = Path("logs")
+        logs_dir.mkdir(exist_ok=True)
+        
+        error_data = {
+            "id": error_id,
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "message": message,
+            "context": context,
+            "stack_trace": stack_trace
+        }
+        
+        error_file = logs_dir / f"error_{error_id}.json"
+        with open(error_file, "w") as json_file:
+            json.dump(error_data, json_file, indent=2)
+    else:
+        logger.error(f"Error {error_id}: {message}")
+    
+    # Display to user if UI component provided
     if error_log_placeholder:
         error_log_placeholder.error(message)  # Display error in Streamlit
+        
+    return error_id

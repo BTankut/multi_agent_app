@@ -1,16 +1,20 @@
 import streamlit as st
-import logging
 import time
 import re
 import json
 import os
+import uuid
 from datetime import datetime
-from utils import get_openrouter_models, handle_error
+from utils import get_openrouter_models, handle_error, logger
 from coordinator import process_query
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# Setup unique session id to track users across page reloads
+if 'session_id' not in st.session_state:
+    st.session_state.session_id = str(uuid.uuid4())
+    logger.info(f"New session started: {st.session_state.session_id}")
+    
+# Log page loads and interactions
+logger.debug(f"App loaded for session: {st.session_state.session_id}")
 
 # Define file path for persistent coordinator model history
 COORDINATOR_HISTORY_FILE = "data/coordinator_history.json"
@@ -654,6 +658,11 @@ def main():
         st.session_state.is_ready_to_process = False        
         # Log that we're starting processing
         logger.info(f"Beginning processing for query: {query[:50]}")
+        
+        # Log detailed information for debugging
+        logger.debug(f"Processing query in session {st.session_state.session_id}: {query[:100]}{'...' if len(query) > 100 else ''}")
+        logger.debug(f"Using coordinator model: {coordinator_model}, option: {option}")
+        
         if 'process_log' in st.session_state:
             st.session_state.process_log.append(f"🔄 Processing: {query[:50]}...")
         
@@ -842,6 +851,15 @@ def main():
             coordinator_error = False
             coordinator_needs_change = False
             alternative_model = None
+            
+            # Log the error details for debugging
+            error_context = {
+                "error_str": error_str,
+                "session_id": st.session_state.session_id,
+                "query": query[:100] + ("..." if len(query) > 100 else ""),
+                "coordinator_model": coordinator_model
+            }
+            handle_error(f"Processing error: {error_str}", context=error_context)
             
             # Specific error message handling
             if "rate limit" in error_str or "429" in error_str:
