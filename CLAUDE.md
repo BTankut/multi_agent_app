@@ -138,6 +138,8 @@ multi_agent_app/
 - Fixed query text display to properly wrap long texts in UI
 - Enhanced model information display with consistent typography and formatting
 - Accurate cost representation without rounding issues
+- Upgraded to pure JSON-based logging system for better organization and analysis
+- Eliminated legacy text-based logs (conversation_log.txt) in favor of structured JSON logs
 - Comprehensive logging system with multiple log levels (app_{date}.log, dev_{date}.log)
 - Structured session tracking with unique session IDs
 - Detailed JSON error logs with stack traces and context
