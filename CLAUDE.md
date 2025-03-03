@@ -102,6 +102,7 @@ multi_agent_app/
 - Robust coordinator model failover system with automatic alternative model suggestion
 - Streamlined UI for error states with clear recovery options
 - Enhanced model family diversity to prevent selecting multiple models from same family
+- Improved model family detection logic for variants of same model family (dolphin, claude, mistral, llama)
 - Beta/alpha model filtering for improved stability
 - Provider diversity implemented to prevent rate limiting
 - Automatic model labels and roles updating system with strict consistency validation

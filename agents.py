@@ -150,12 +150,29 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
                 # Extract model family
                 model_parts = model_name.split('/')
                 if len(model_parts) > 1:
-                    # Extract the first part of the model name (e.g., "claude-3" from "claude-3-sonnet")
-                    name_parts = model_parts[1].split('-')
-                    if len(name_parts) > 1:
-                        family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+                    # Remove version indicators like "r1" to better identify base model family
+                    name = model_parts[1]
+                    # Extract model family core name (e.g. "dolphin3.0" or "claude-3")
+                    if "dolphin" in name.lower():
+                        family_key = f"{provider}/dolphin"
+                    elif "claude" in name.lower():
+                        # For claude models, use more specific versioning (claude-3, claude-2, etc.)
+                        name_parts = name.split('-')
+                        if len(name_parts) > 1:
+                            family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+                        else:
+                            family_key = f"{provider}/{name_parts[0]}"
+                    elif "mistral" in name.lower():
+                        family_key = f"{provider}/mistral"
+                    elif "llama" in name.lower():
+                        family_key = f"{provider}/llama"
                     else:
-                        family_key = f"{provider}/{name_parts[0]}"
+                        # Default to first two segments for other models
+                        name_parts = name.split('-')
+                        if len(name_parts) > 1:
+                            family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+                        else:
+                            family_key = f"{provider}/{name_parts[0]}"
                 else:
                     family_key = model_name
                 
@@ -173,11 +190,29 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
             # Extract model family for consistency
             model_parts = model_name.split('/')
             if len(model_parts) > 1:
-                name_parts = model_parts[1].split('-')
-                if len(name_parts) > 1:
-                    family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+                # Remove version indicators like "r1" to better identify base model family
+                name = model_parts[1]
+                # Extract model family core name (e.g. "dolphin3.0" or "claude-3")
+                if "dolphin" in name.lower():
+                    family_key = f"{provider}/dolphin"
+                elif "claude" in name.lower():
+                    # For claude models, use more specific versioning (claude-3, claude-2, etc.)
+                    name_parts = name.split('-')
+                    if len(name_parts) > 1:
+                        family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+                    else:
+                        family_key = f"{provider}/{name_parts[0]}"
+                elif "mistral" in name.lower():
+                    family_key = f"{provider}/mistral"
+                elif "llama" in name.lower():
+                    family_key = f"{provider}/llama"
                 else:
-                    family_key = f"{provider}/{name_parts[0]}"
+                    # Default to first two segments for other models
+                    name_parts = name.split('-')
+                    if len(name_parts) > 1:
+                        family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+                    else:
+                        family_key = f"{provider}/{name_parts[0]}"
             else:
                 family_key = model_name
                 
@@ -267,13 +302,29 @@ def limit_models_per_provider(models, max_per_provider=2):
         # Extract model family (e.g., "claude-3" from "anthropic/claude-3-sonnet")
         model_parts = model.split('/')
         if len(model_parts) > 1:
-            # Extract the first part of the model name (before any "-" character after the first "-")
-            # For example: claude-3-sonnet -> claude-3
-            name_parts = model_parts[1].split('-')
-            if len(name_parts) > 1:
-                family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+            # Remove version indicators like "r1" to better identify base model family
+            name = model_parts[1]
+            # Extract model family core name (e.g. "dolphin3.0" or "claude-3")
+            if "dolphin" in name.lower():
+                family_key = f"{provider}/dolphin"
+            elif "claude" in name.lower():
+                # For claude models, use more specific versioning (claude-3, claude-2, etc.)
+                name_parts = name.split('-')
+                if len(name_parts) > 1:
+                    family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+                else:
+                    family_key = f"{provider}/{name_parts[0]}"
+            elif "mistral" in name.lower():
+                family_key = f"{provider}/mistral"
+            elif "llama" in name.lower():
+                family_key = f"{provider}/llama"
             else:
-                family_key = f"{provider}/{name_parts[0]}"
+                # Default to first two segments for other models
+                name_parts = name.split('-')
+                if len(name_parts) > 1:
+                    family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+                else:
+                    family_key = f"{provider}/{name_parts[0]}"
         else:
             family_key = model
             
