@@ -82,7 +82,7 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
     try:
         # Explicitly mark that this is a coordinator model call
         response_tuple = call_agent(coordinator_model, "You are a helpful assistant.", prompt, openrouter_models, 
-                                   conversation_history=coordinator_history, is_coordinator=True)
+                                   conversation_history=coordinator_history, is_coordinator=True, reasoning_mode=reasoning_mode)
         
         # Handle the new tuple return format from call_agent
         response = None
@@ -312,7 +312,7 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
     # Make parallel API calls to all models
     try:
         from utils import call_agents_parallel
-        parallel_results = call_agents_parallel(selected_models, model_roles, query, openrouter_models, agent_histories)
+        parallel_results = call_agents_parallel(selected_models, model_roles, query, openrouter_models, agent_histories, reasoning_mode=reasoning_mode)
         
         # Process all results
         for model_name, response_tuple in parallel_results.items():
@@ -382,7 +382,7 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                         # Import call_agent here to fix potential reference error
                         from utils import call_agent
                         # Use the new version that returns metadata
-                        alt_response_tuple = call_agent(alt_model_name, model_roles.get(model_name, "You are a general-purpose assistant."), query, openrouter_models)
+                        alt_response_tuple = call_agent(alt_model_name, model_roles.get(model_name, "You are a general-purpose assistant."), query, openrouter_models, reasoning_mode=reasoning_mode)
                         
                         # Unpack the response
                         if isinstance(alt_response_tuple, tuple) and len(alt_response_tuple) == 2:
@@ -455,7 +455,8 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
             
             try:
                 from utils import call_agent
-                response_tuple = call_agent(model_name, role, query, openrouter_models, conversation_history=agent_conversation)
+                response_tuple = call_agent(model_name, role, query, openrouter_models, 
+                                         conversation_history=agent_conversation, reasoning_mode=reasoning_mode)
                 
                 # Process response using same logic as above
                 if isinstance(response_tuple, tuple) and len(response_tuple) == 2:
@@ -648,7 +649,8 @@ I need you to analyze multiple conflicting answers from different AI models and 
                         tiebreaker_role, 
                         tiebreaker_prompt, 
                         openrouter_models,
-                        is_tiebreaker=True  # Flag this as a tiebreaker for special handling
+                        is_tiebreaker=True,  # Flag this as a tiebreaker for special handling
+                        reasoning_mode=reasoning_mode  # Pass reasoning mode
                     )
                     
                     # Handle the tuple return format for tiebreaker
@@ -792,7 +794,8 @@ REASONING APPROACH:
             response_tuple = call_agent(coordinator_model, 
                                      "You synthesize information from multiple sources.", 
                                      combined_input, openrouter_models,
-                                     is_coordinator=True)
+                                     is_coordinator=True,
+                                     reasoning_mode=reasoning_mode)
             
             # Handle the tuple return format
             final_answer = None
@@ -916,7 +919,7 @@ REASONING APPROACH:
     
     return "No responses were received from the agents.", updated_agent_history
 
-def process_query(query, coordinator_model, option, openrouter_models, coordinator_history=None, agent_history=None):
+def process_query(query, coordinator_model, option, openrouter_models, coordinator_history=None, agent_history=None, reasoning_mode=None):
     """
     Main function to process a user query through the multi-agent system.
     
@@ -927,6 +930,7 @@ def process_query(query, coordinator_model, option, openrouter_models, coordinat
         openrouter_models: List of available models
         coordinator_history: Previous conversation with coordinator (optional)
         agent_history: Previous conversations with agents (optional)
+        reasoning_mode: The reasoning mode for OpenRouter API ("disabled", "all", "coordinator_only", "auto")
     
     Returns:
         Tuple of (final_answer, labels, updated_histories)

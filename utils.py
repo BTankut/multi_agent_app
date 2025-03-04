@@ -234,7 +234,7 @@ def get_openrouter_models(min_date=None, sort_by_newest=True):
         logger.error(f"Unexpected error fetching OpenRouter models: {str(e)}")
         return []
 
-def call_agents_parallel(model_names, model_roles, query, openrouter_models, agent_histories=None):
+def call_agents_parallel(model_names, model_roles, query, openrouter_models, agent_histories=None, reasoning_mode=None):
     """
     Calls multiple OpenRouter models in parallel using ThreadPoolExecutor.
     Returns a dictionary of model_name -> (response_text, metadata).
@@ -245,6 +245,7 @@ def call_agents_parallel(model_names, model_roles, query, openrouter_models, age
         query: The user query
         openrouter_models: List of available OpenRouter models
         agent_histories: Dictionary mapping model_name to conversation history (optional)
+        reasoning_mode: The reasoning mode for OpenRouter API ("disabled", "all", "coordinator_only", "auto")
     """
     results = {}
     logger.info(f"Starting parallel API calls to {len(model_names)} models")
@@ -265,7 +266,8 @@ def call_agents_parallel(model_names, model_roles, query, openrouter_models, age
         try:
             # Call the existing call_agent function
             logger.info(f"Parallel worker calling model: {model_name}")
-            response_tuple = call_agent(model_name, role, query, openrouter_models, conversation_history=history)
+            response_tuple = call_agent(model_name, role, query, openrouter_models, 
+                                      conversation_history=history, reasoning_mode=reasoning_mode)
             logger.info(f"Parallel worker received response from: {model_name}")
             return model_name, response_tuple
         except Exception as e:
@@ -322,7 +324,7 @@ def call_agents_parallel(model_names, model_roles, query, openrouter_models, age
     logger.info(f"Completed parallel API calls for {len(results)} models")
     return results
 
-def call_agent(model_name, role, query, openrouter_models, conversation_history=None, is_coordinator=False, is_tiebreaker=False):
+def call_agent(model_name, role, query, openrouter_models, conversation_history=None, is_coordinator=False, is_tiebreaker=False, reasoning_mode=None):
     """
     Calls an OpenRouter model with error handling and logging.
     Returns a tuple of (response_text, metadata) where metadata contains token usage and timing data.
@@ -335,6 +337,7 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
         conversation_history: Previous conversation history (optional)
         is_coordinator: Whether this model is being used as a coordinator (affects error handling)
         is_tiebreaker: Whether this model is being used as a dedicated tiebreaker (for conflict resolution)
+        reasoning_mode: The reasoning mode for OpenRouter API ("disabled", "auto", "all", "coordinator_only")
     """
     start_time = time.time()
     token_usage = {"prompt": 0, "completion": 0, "total": 0}
@@ -392,14 +395,38 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
         retry_count = 0  # For tracking
         
         try:
+            # Prepare base request payload
+            request_payload = {
+                "model": model_name,
+                "messages": messages
+            }
+            
+            # Add reasoning based on reasoning_mode setting
+            if reasoning_mode:
+                if reasoning_mode == "all":
+                    # Enable reasoning for all models
+                    request_payload["reasoning"] = True
+                elif reasoning_mode == "coordinator_only" and is_coordinator:
+                    # Enable reasoning only for coordinator model
+                    request_payload["reasoning"] = True
+                elif reasoning_mode == "auto":
+                    # Auto mode - enable reasoning for coordinator and complex queries
+                    complex_query = len(query) > 200 or any(keyword in query.lower() for keyword in 
+                                                         ["calculate", "math", "reason", "logic", "solve", "proof"])
+                    if is_coordinator or complex_query:
+                        request_payload["reasoning"] = True
+            
+            # Log if reasoning is enabled
+            if request_payload.get("reasoning"):
+                logger.info(f"Using reasoning mode for model: {model_name}")
+                if 'process_log' in globals() or 'process_log' in locals():
+                    process_log.append(f"Using reasoning mode for: {model_name}")
+            
             # Make API request
             response = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers=headers,
-                json={
-                    "model": model_name,
-                    "messages": messages
-                },
+                json=request_payload,
                 timeout=45
             )
             completion_time = time.time() - start_time

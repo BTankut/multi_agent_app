@@ -100,6 +100,14 @@ def initialize_session_state():
     if 'form_was_submitted' not in st.session_state:
         st.session_state.form_was_submitted = False
         
+    # Reasoning mode preference (default to disabled)
+    if 'reasoning_mode' not in st.session_state:
+        st.session_state.reasoning_mode = "disabled"
+        
+    # Advanced settings panel visibility
+    if 'show_advanced_settings' not in st.session_state:
+        st.session_state.show_advanced_settings = False
+        
     # Processing state - ESSENTIAL for query handling
     if 'is_ready_to_process' not in st.session_state:
         st.session_state.is_ready_to_process = False
@@ -498,6 +506,53 @@ def main():
             index=0
         )
         
+        # Advanced settings button
+        if st.button("⚙️ Advanced Settings", key="advanced_settings_btn"):
+            st.session_state.show_advanced_settings = not st.session_state.show_advanced_settings
+            st.rerun()
+            
+        # Advanced settings expander - only shown if button is clicked
+        if st.session_state.show_advanced_settings:
+            with st.expander("Advanced Configuration", expanded=True):
+                st.markdown("### OpenRouter Reasoning Mode")
+                st.write("Enable OpenRouter's reasoning mode for more thorough problem solving")
+                
+                reasoning_mode = st.radio(
+                    "Select reasoning mode:",
+                    options=[
+                        "All models use reasoning",
+                        "Only coordinator uses reasoning",
+                        "Disable reasoning (default)"
+                    ],
+                    index=2,  # Default to "Disable reasoning"
+                    key="reasoning_radio"
+                )
+                
+                # Convert UI selection to internal value
+                if reasoning_mode == "All models use reasoning":
+                    st.session_state.reasoning_mode = "all"
+                elif reasoning_mode == "Only coordinator uses reasoning":
+                    st.session_state.reasoning_mode = "coordinator_only"
+                else:
+                    st.session_state.reasoning_mode = "disabled"
+                
+                # Display some info about the reasoning mode
+                st.info(f"""
+                **Current reasoning mode: {st.session_state.reasoning_mode}**
+                
+                ℹ️ Reasoning mode instructs the model to explain its thinking process step-by-step. 
+                This is useful for complex mathematical or logical problems, but may increase token usage.
+                
+                - **all**: All models show reasoning process
+                - **coordinator_only**: Only the coordinator model shows reasoning
+                - **disabled**: No reasoning (default behavior)
+                """)
+                
+                # Close button for the advanced settings
+                if st.button("Close Advanced Settings", key="close_advanced_settings"):
+                    st.session_state.show_advanced_settings = False
+                    st.rerun()
+        
         # Simple dropdown for model refresh
         with st.expander("Refresh Models", expanded=False):
             st.write("Click the button below to refresh models from OpenRouter API")
@@ -591,6 +646,11 @@ def main():
                 value=True,
                 key="use_suggested_model"
             )
+            
+            # Display the current reasoning mode so it's visible in the form
+            if st.session_state.reasoning_mode != "disabled":
+                st.info(f"Using reasoning mode: {st.session_state.reasoning_mode}. You can change this in Advanced Settings.")
+                st.checkbox("Keep using reasoning mode", value=True, key="keep_reasoning_mode", disabled=True)
             if use_suggested:
                 use_alt_model = st.session_state.suggested_alt_model
                 
@@ -713,13 +773,27 @@ def main():
                 for model, history in agent_history.items():
                     logger.info(f"Agent {model}: {len(history)} messages")
             
+            # Get the current reasoning mode
+            current_reasoning_mode = st.session_state.reasoning_mode
+            
+            # Log the reasoning mode for debugging
+            if 'process_log' in st.session_state:
+                st.session_state.process_log.append(f"Using reasoning mode: {current_reasoning_mode}")
+                
+            # Only use reasoning mode if not disabled
+            reasoning_arg = None
+            if current_reasoning_mode != "disabled":
+                reasoning_arg = current_reasoning_mode
+                logger.info(f"Using reasoning mode: {reasoning_arg}")
+                
             final_answer, labels, updated_histories = process_query(
                 query, 
                 coordinator_model, 
                 option, 
                 st.session_state.openrouter_models,
                 coordinator_history=coordinator_history,
-                agent_history=agent_history
+                agent_history=agent_history,
+                reasoning_mode=reasoning_arg
             )
             
             # Always update conversation history
