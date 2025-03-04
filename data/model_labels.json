@@ -700,21 +700,6 @@
     ]
   },
   {
-    "model": "neversleep/llama-3.1-lumimaid-70b",
-    "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "anthracite-org/magnum-v4-72b",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "anthropic/claude-3.5-sonnet:beta",
     "labels": [
       "experimental",
@@ -735,6 +720,21 @@
     ]
   },
   {
+    "model": "anthracite-org/magnum-v4-72b",
+    "labels": [
+      "general_assistant",
+      "paid"
+    ]
+  },
+  {
+    "model": "neversleep/llama-3.1-lumimaid-70b",
+    "labels": [
+      "general_assistant",
+      "reasoning_expert",
+      "paid"
+    ]
+  },
+  {
     "model": "x-ai/grok-beta",
     "labels": [
       "general_assistant",
@@ -743,7 +743,7 @@
     ]
   },
   {
-    "model": "mistralai/ministral-8b",
+    "model": "mistralai/ministral-3b",
     "labels": [
       "general_assistant",
       "paid",
@@ -751,7 +751,7 @@
     ]
   },
   {
-    "model": "mistralai/ministral-3b",
+    "model": "mistralai/ministral-8b",
     "labels": [
       "general_assistant",
       "paid",
@@ -784,18 +784,18 @@
     ]
   },
   {
-    "model": "inflection/inflection-3-pi",
-    "labels": [
-      "conversationalist",
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "inflection/inflection-3-productivity",
     "labels": [
       "general_assistant",
       "productivity_focused",
+      "paid"
+    ]
+  },
+  {
+    "model": "inflection/inflection-3-pi",
+    "labels": [
+      "conversationalist",
+      "general_assistant",
       "paid"
     ]
   },
@@ -806,6 +806,13 @@
       "fast_response",
       "math_expert",
       "code_expert",
+      "paid"
+    ]
+  },
+  {
+    "model": "thedrummer/rocinante-12b",
+    "labels": [
+      "general_assistant",
       "paid"
     ]
   },
@@ -824,43 +831,10 @@
     ]
   },
   {
-    "model": "thedrummer/rocinante-12b",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "meta-llama/llama-3.2-3b-instruct",
     "labels": [
       "general_assistant",
       "instruction_following",
-      "paid"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3.2-1b-instruct:free",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "free"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3.2-1b-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3.2-90b-vision-instruct",
-    "labels": [
-      "instruction_following",
-      "vision_expert",
-      "general_assistant",
-      "reasoning_expert",
       "paid"
     ]
   },
@@ -880,6 +854,32 @@
       "instruction_following",
       "paid",
       "vision_expert"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3.2-90b-vision-instruct",
+    "labels": [
+      "instruction_following",
+      "vision_expert",
+      "general_assistant",
+      "reasoning_expert",
+      "paid"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3.2-1b-instruct:free",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "free"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3.2-1b-instruct",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "paid"
     ]
   },
   {
@@ -909,12 +909,9 @@
     ]
   },
   {
-    "model": "openai/o1-mini-2024-09-12",
+    "model": "openai/o1-mini",
     "labels": [
-      "fast_response",
       "general_assistant",
-      "math_expert",
-      "reasoning_expert",
       "paid"
     ]
   },
@@ -926,9 +923,9 @@
     ]
   },
   {
-    "model": "openai/o1-preview-2024-09-12",
+    "model": "openai/o1-mini-2024-09-12",
     "labels": [
-      "experimental",
+      "fast_response",
       "general_assistant",
       "math_expert",
       "reasoning_expert",
@@ -936,9 +933,12 @@
     ]
   },
   {
-    "model": "openai/o1-mini",
+    "model": "openai/o1-preview-2024-09-12",
     "labels": [
+      "experimental",
       "general_assistant",
+      "math_expert",
+      "reasoning_expert",
       "paid"
     ]
   },
@@ -972,21 +972,21 @@
     ]
   },
   {
-    "model": "qwen/qwen-2-vl-7b-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid",
-      "vision_expert"
-    ]
-  },
-  {
     "model": "sao10k/l3.1-euryale-70b",
     "labels": [
       "general_assistant",
       "math_expert",
       "reasoning_expert",
       "paid"
+    ]
+  },
+  {
+    "model": "qwen/qwen-2-vl-7b-instruct",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "paid",
+      "vision_expert"
     ]
   },
   {
@@ -1050,18 +1050,18 @@
     ]
   },
   {
+    "model": "aetherwiing/mn-starcannon-12b",
+    "labels": [
+      "general_assistant",
+      "paid"
+    ]
+  },
+  {
     "model": "sao10k/l3-lunaris-8b",
     "labels": [
       "general_assistant",
       "math_expert",
       "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "aetherwiing/mn-starcannon-12b",
-    "labels": [
-      "general_assistant",
       "paid"
     ]
   },
@@ -1090,21 +1090,6 @@
     ]
   },
   {
-    "model": "perplexity/llama-3.1-sonar-small-128k-chat",
-    "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
-    ]
-  },
-  {
-    "model": "perplexity/llama-3.1-sonar-large-128k-chat",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "perplexity/llama-3.1-sonar-large-128k-online",
     "labels": [
       "general_assistant",
@@ -1120,7 +1105,31 @@
     ]
   },
   {
+    "model": "perplexity/llama-3.1-sonar-large-128k-chat",
+    "labels": [
+      "general_assistant",
+      "paid"
+    ]
+  },
+  {
+    "model": "perplexity/llama-3.1-sonar-small-128k-chat",
+    "labels": [
+      "general_assistant",
+      "paid",
+      "fast_response"
+    ]
+  },
+  {
     "model": "meta-llama/llama-3.1-405b-instruct",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "paid",
+      "reasoning_expert"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3.1-70b-instruct",
     "labels": [
       "general_assistant",
       "instruction_following",
@@ -1142,15 +1151,6 @@
       "general_assistant",
       "instruction_following",
       "paid"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3.1-70b-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid",
-      "reasoning_expert"
     ]
   },
   {
@@ -1301,6 +1301,13 @@
     ]
   },
   {
+    "model": "nousresearch/hermes-2-pro-llama-3-8b",
+    "labels": [
+      "general_assistant",
+      "paid"
+    ]
+  },
+  {
     "model": "mistralai/mistral-7b-instruct:free",
     "labels": [
       "general_assistant",
@@ -1321,13 +1328,6 @@
     "labels": [
       "general_assistant",
       "instruction_following",
-      "paid"
-    ]
-  },
-  {
-    "model": "nousresearch/hermes-2-pro-llama-3-8b",
-    "labels": [
-      "general_assistant",
       "paid"
     ]
   },
@@ -1388,37 +1388,6 @@
     ]
   },
   {
-    "model": "openai/gpt-4o-2024-05-13",
-    "labels": [
-      "general_assistant",
-      "math_expert",
-      "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3-8b",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3-70b",
-    "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-guard-2-8b",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "openai/gpt-4o",
     "labels": [
       "general_assistant",
@@ -1435,6 +1404,37 @@
       "general_assistant",
       "math_expert",
       "reasoning_expert",
+      "paid"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3-70b",
+    "labels": [
+      "general_assistant",
+      "paid",
+      "reasoning_expert"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3-8b",
+    "labels": [
+      "general_assistant",
+      "paid"
+    ]
+  },
+  {
+    "model": "openai/gpt-4o-2024-05-13",
+    "labels": [
+      "general_assistant",
+      "math_expert",
+      "reasoning_expert",
+      "paid"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-guard-2-8b",
+    "labels": [
+      "general_assistant",
       "paid"
     ]
   },
@@ -1462,6 +1462,15 @@
     ]
   },
   {
+    "model": "meta-llama/llama-3-70b-instruct",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "paid",
+      "reasoning_expert"
+    ]
+  },
+  {
     "model": "meta-llama/llama-3-8b-instruct:free",
     "labels": [
       "general_assistant",
@@ -1475,15 +1484,6 @@
       "general_assistant",
       "instruction_following",
       "paid"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3-70b-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid",
-      "reasoning_expert"
     ]
   },
   {
@@ -1511,9 +1511,8 @@
     ]
   },
   {
-    "model": "google/gemini-pro-1.5",
+    "model": "openai/gpt-4-turbo",
     "labels": [
-      "fast_response",
       "general_assistant",
       "math_expert",
       "reasoning_expert",
@@ -1521,8 +1520,9 @@
     ]
   },
   {
-    "model": "openai/gpt-4-turbo",
+    "model": "google/gemini-pro-1.5",
     "labels": [
+      "fast_response",
       "general_assistant",
       "math_expert",
       "reasoning_expert",
@@ -1560,14 +1560,14 @@
     ]
   },
   {
-    "model": "cohere/command",
+    "model": "cohere/command-r",
     "labels": [
       "general_assistant",
       "paid"
     ]
   },
   {
-    "model": "cohere/command-r",
+    "model": "cohere/command",
     "labels": [
       "general_assistant",
       "paid"
@@ -1595,25 +1595,6 @@
     ]
   },
   {
-    "model": "anthropic/claude-3-opus:beta",
-    "labels": [
-      "experimental",
-      "general_assistant",
-      "math_expert",
-      "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "anthropic/claude-3-opus",
-    "labels": [
-      "general_assistant",
-      "math_expert",
-      "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
     "model": "anthropic/claude-3-sonnet:beta",
     "labels": [
       "experimental",
@@ -1625,6 +1606,25 @@
   },
   {
     "model": "anthropic/claude-3-sonnet",
+    "labels": [
+      "general_assistant",
+      "math_expert",
+      "reasoning_expert",
+      "paid"
+    ]
+  },
+  {
+    "model": "anthropic/claude-3-opus:beta",
+    "labels": [
+      "experimental",
+      "general_assistant",
+      "math_expert",
+      "reasoning_expert",
+      "paid"
+    ]
+  },
+  {
+    "model": "anthropic/claude-3-opus",
     "labels": [
       "general_assistant",
       "math_expert",
@@ -1680,18 +1680,18 @@
     ]
   },
   {
+    "model": "mistralai/mistral-tiny",
+    "labels": [
+      "general_assistant",
+      "paid"
+    ]
+  },
+  {
     "model": "mistralai/mistral-small",
     "labels": [
       "general_assistant",
       "paid",
       "fast_response"
-    ]
-  },
-  {
-    "model": "mistralai/mistral-tiny",
-    "labels": [
-      "general_assistant",
-      "paid"
     ]
   },
   {
@@ -1711,6 +1711,16 @@
     ]
   },
   {
+    "model": "google/gemini-pro",
+    "labels": [
+      "fast_response",
+      "general_assistant",
+      "math_expert",
+      "reasoning_expert",
+      "paid"
+    ]
+  },
+  {
     "model": "google/gemini-pro-vision",
     "labels": [
       "vision_expert",
@@ -1722,9 +1732,9 @@
     ]
   },
   {
-    "model": "google/gemini-pro",
+    "model": "mistralai/mixtral-8x7b-instruct",
     "labels": [
-      "fast_response",
+      "instruction_following",
       "general_assistant",
       "math_expert",
       "reasoning_expert",
@@ -1734,16 +1744,6 @@
   {
     "model": "mistralai/mixtral-8x7b",
     "labels": [
-      "general_assistant",
-      "math_expert",
-      "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "mistralai/mixtral-8x7b-instruct",
-    "labels": [
-      "instruction_following",
       "general_assistant",
       "math_expert",
       "reasoning_expert",
@@ -1945,18 +1945,18 @@
     ]
   },
   {
-    "model": "mancer/weaver",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "huggingfaceh4/zephyr-7b-beta:free",
     "labels": [
       "general_assistant",
       "experimental",
       "free"
+    ]
+  },
+  {
+    "model": "mancer/weaver",
+    "labels": [
+      "general_assistant",
+      "paid"
     ]
   },
   {
@@ -1984,18 +1984,18 @@
     ]
   },
   {
-    "model": "google/palm-2-chat-bison",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "google/palm-2-codechat-bison",
     "labels": [
       "general_assistant",
       "paid",
       "code_expert"
+    ]
+  },
+  {
+    "model": "google/palm-2-chat-bison",
+    "labels": [
+      "general_assistant",
+      "paid"
     ]
   },
   {
@@ -2028,13 +2028,6 @@
     ]
   },
   {
-    "model": "openai/gpt-3.5-turbo",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "openai/gpt-3.5-turbo-0125",
     "labels": [
       "general_assistant",
@@ -2042,7 +2035,14 @@
     ]
   },
   {
-    "model": "openai/gpt-4",
+    "model": "openai/gpt-3.5-turbo",
+    "labels": [
+      "general_assistant",
+      "paid"
+    ]
+  },
+  {
+    "model": "openai/gpt-4-0314",
     "labels": [
       "general_assistant",
       "math_expert",
@@ -2051,7 +2051,7 @@
     ]
   },
   {
-    "model": "openai/gpt-4-0314",
+    "model": "openai/gpt-4",
     "labels": [
       "general_assistant",
       "math_expert",

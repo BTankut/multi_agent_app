@@ -570,13 +570,13 @@ def main():
         # Form title
         st.write("**Enter Your Query Below**")
         
-        # Auto-fill query field if we have a current_query (for error recovery)
-        initial_query = st.session_state.current_query if 'current_query' in st.session_state and st.session_state.current_query else ""
+        # Don't auto-fill the query field with the current query to avoid resubmitting the same query
+        # This should fix the issue with the form resubmitting the same query even when cleared
         
         # Query input field
         query_input = st.text_area(
             "Enter your query:", 
-            value=initial_query,
+            value="",
             height=150,
             key="query_form_input"
         )
