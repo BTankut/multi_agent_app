@@ -566,7 +566,7 @@ def main():
     # So no need to duplicate that here
     
     # Use a form to completely isolate the query processing from any other UI elements
-    with st.form(key="query_form", clear_on_submit=False):  # Changed to not clear on submit
+    with st.form(key="query_form", clear_on_submit=True):  # Changed to clear on submit
         # Form title
         st.write("**Enter Your Query Below**")
         
@@ -600,8 +600,11 @@ def main():
         # Handle form submission - this is isolated from all other UI elements
         if submit_query:
             if query_input.strip():
+                # Store current query temporarily
+                current_query_value = query_input
+                
                 # Set up for processing
-                st.session_state.current_query = query_input
+                st.session_state.current_query = current_query_value
                 st.session_state.last_action = "process_query"
                 st.session_state.is_ready_to_process = True
                 
@@ -622,7 +625,7 @@ def main():
                         st.session_state.process_log.append(f"🔄 Using alternative model: {use_alt_model}")
                     
                 # Log
-                logger.info(f"Process button clicked for query: {query_input[:30]}...")
+                logger.info(f"Process button clicked for query: {current_query_value[:30]}...")
             else:
                 # Handle empty query
                 st.warning("Please enter a query in the text box.")

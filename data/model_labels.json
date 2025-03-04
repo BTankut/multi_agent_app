@@ -1,5 +1,13 @@
 [
   {
+    "model": "qwen/qwen2.5-32b-instruct",
+    "labels": [
+      "general_assistant",
+      "paid",
+      "instruction_following"
+    ]
+  },
+  {
     "model": "moonshotai/moonlight-16b-a3b-instruct:free",
     "labels": [
       "general_assistant",
@@ -1376,13 +1384,6 @@
       "fast_response",
       "math_expert",
       "code_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "deepseek/deepseek-chat-v2.5",
-    "labels": [
-      "general_assistant",
       "paid"
     ]
   },
