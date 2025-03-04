@@ -559,7 +559,37 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                     if 'process_log' in st.session_state:
                         st.session_state.process_log.append(f"Selected dedicated tiebreaker: {tiebreaker_model}")
                     
-                    tiebreaker_role = get_model_roles([tiebreaker_model], ["reasoning_expert"])[tiebreaker_model]
+                    # Use a specialized tiebreaker role prompt that emphasizes methodical analysis
+                    tiebreaker_role = """You are a precise analytical assistant with expertise in resolving conflicts between other AI models. 
+Your task is to analyze multiple different answers to the same problem and determine which one is correct.
+
+As an expert evaluator, you will:
+1. FIRST AND FOREMOST: Verify you understand the original problem statement correctly - restate it in your own words
+2. Analyze each response for logical consistency and alignment with the original problem
+3. Check mathematical calculations for accuracy
+4. Verify that claims are supported by evidence from the original problem
+5. Determine which response has the most valid reasoning methodology
+6. Identify flaws or gaps in each approach
+
+CRITICAL FOR LOGICAL AND MATHEMATICAL PROBLEMS:
+- Create a structured analysis framework like a truth table or possibility matrix
+- Trace through each possible scenario systematically
+- Test EVERY possible combination of variables to verify completeness
+- Use formal logical notation when helpful (A → B means "if A then B")
+- Work through conditional statements by examining both when they are triggered and when they're not
+- For problems with multiple conditions, verify that ALL conditions are met simultaneously
+- ALWAYS verify your own understanding of the problem before analyzing other responses
+
+IMPORTANT GUIDELINES:
+- For logical puzzles, walk through each model's reasoning step-by-step to find errors
+- For mathematical problems, verify calculations and approach validity
+- For code problems, check both correctness and efficiency
+- Do not simply choose the most common answer - prioritize correctness over popularity
+- When responses contradict each other, identify which has the most rigorous reasoning
+- If multiple answers are defensible based on different valid interpretations, explain this
+- If you find the problem itself contains ambiguities or contradictions, state this clearly
+
+You should maintain a neutral perspective, focusing purely on methodological soundness and logical validity."""
                     
                     # Create a more comprehensive tiebreaker prompt that shows all responses
                     tiebreaker_prompt = f"""# Tiebreaker Analysis Task
@@ -578,25 +608,31 @@ I need you to analyze multiple conflicting answers from different AI models and 
                     
                     tiebreaker_prompt += """
 ## Your Task:
-1. Carefully analyze each agent's response to identify their reasoning and conclusions
-2. For logical or mathematical problems, work through the steps methodically by evaluating all possible scenarios
-3. For problems with discrete possibilities, create a table showing all possible combinations of variables
-4. Verify each possibility against all stated conditions in the problem
-5. When multiple answers conflict, determine which is correct and explain why
-6. Provide your own independent solution if all given answers are incorrect or incomplete
+1. FIRST STEP: Restate the original problem in your own words to verify you understand it correctly
+2. Carefully analyze each agent's response to identify their reasoning and conclusions
+3. For logical or mathematical problems, work through the steps methodically by evaluating all possible scenarios
+4. For problems with discrete possibilities, create a table showing all possible combinations of variables
+5. Verify each possibility against all stated conditions in the problem
+6. When multiple answers conflict, determine which is correct and explain why
+7. Provide your own independent solution if all given answers are incorrect or incomplete
 
 ## For Logical Problems Specifically:
+- Create a complete truth table or possibility matrix for all variables in the problem
 - Test all possible combinations systematically, ensuring no valid combination is overlooked
 - When working with conditional statements (if-then statements), verify them carefully:
   - "If A, then B" means when A is true, B must be true, but says nothing about when A is false
   - "If A, then B" is logically equivalent to "Not B implies Not A"
-  - "If A, then B" does NOT mean "If B, then A" or "If Not A, then Not B" 
+  - "If A, then B" does NOT mean "If B, then A" or "If Not A, then Not B"
+  - Test conditional statements by examining BOTH when the condition is triggered AND when it's not 
 - For each possibility, check whether ALL conditions are simultaneously satisfied
 - Consider edge cases and carefully examine the logical implications of each condition
+- Identify any potential ambiguities in how the problem could be interpreted
 
 ## Response Format:
-- Begin with "ANALYSIS:" followed by your step-by-step reasoning
-- Include a complete analysis showing which possibilities satisfy all conditions
+- Begin with "PROBLEM VERIFICATION:" where you restate your understanding of the problem
+- Then "METHODOLOGY:" describing your analytical approach (truth table, systematic testing, etc.)
+- Then "ANALYSIS:" with your step-by-step reasoning, showing how you tested each possibility
+- Include a complete analysis showing which possibilities satisfy all conditions and which don't
 - Then "CONCLUSION:" with the final answer and brief justification
 - Always respond in the same language as the original query
 """
@@ -694,23 +730,29 @@ CRITICAL FOR LOGIC PUZZLES AND MULTI-CHOICE PROBLEMS:
 - In logic problems with conditional statements, verify how each model interprets these implications
 - Choose the response with the most rigorous logical analysis, even if it's just from one model
 - For complex problems, first identify which models have done the most thorough analysis
+- When a model restates the problem in its own words, check this against the original problem
 
 TIEBREAKER GUIDANCE:
 - The tiebreaker model was specifically tasked with carefully analyzing all agent responses
+- First check if the tiebreaker correctly understood the original problem (look for a PROBLEM VERIFICATION section)
+- If the tiebreaker misunderstood the problem, its analysis may be flawed regardless of its thoroughness
 - Evaluate the tiebreaker's reasoning process independently - is it logically sound and complete?
+- If the tiebreaker created a systematic framework (truth table, possibility matrix), verify its completeness
 - If the tiebreaker's reasoning is strong and methodical, prioritize its conclusion
 - If the tiebreaker missed important cases in its analysis, prefer models with more complete reasoning
+- If the tiebreaker identified ambiguities in the problem, acknowledge these in your response
 
 REASONING APPROACH:
 1. Identify the models that performed the most systematic and thorough analysis
 2. Verify their analysis against all problem constraints and conditions
 3. Choose the answer with the strongest logical foundation, not the most popular one
 4. Ensure the selected solution doesn't create any contradictions or impossibilities
-5. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.)
-6. Present math formulas in plain text format (use * for multiplication, / for division)
-7. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}
-8. Be direct and concise in your final answer
-9. Always respond in the same language as the original user query"""
+5. If models are interpreting the problem differently, explain the correct interpretation
+6. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.)
+7. Present math formulas in plain text format (use * for multiplication, / for division)
+8. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}
+9. Be direct and concise in your final answer
+10. Always respond in the same language as the original user query"""
         else:
             combined_input += """## Synthesis Instructions
 
