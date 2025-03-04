@@ -133,6 +133,7 @@ multi_agent_app/
 - Added model recency prioritization to favor newer models in selection
 - New date-based filtering of models to exclude outdated versions
 - Implemented model sorting by creation date (newest first)
+- Model label refinements to better match capabilities (improved o3-mini-high and gpt-4.5-preview)
 - Automatic model labels and roles updating system with strict consistency validation
 - Language consistency ensured across all models - always respond in query language
 - Robust etiket-rol tutarlılığı mekanizması with automatic validation
@@ -225,6 +226,8 @@ multi_agent_app/
 
 ## Future Improvements
 
+- Implementation of OpenRouter reasoning mode with three options (all models, coordinator only, disabled)
+- Dedicated configuration panel for advanced options (reasoning mode, API settings)
 - Implement budget controls with spending limits and alerts
 - Enhance query analysis for better label extraction
 - Add multimodal support for images and file uploads
