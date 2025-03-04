@@ -6,7 +6,7 @@ from agents import get_models_by_labels, get_model_roles, determine_complexity, 
 # Initialize logger
 logger = logging.getLogger(__name__)
 
-def determine_query_labels(query, coordinator_model, openrouter_models, coordinator_history=None):
+def determine_query_labels(query, coordinator_model, openrouter_models, coordinator_history=None, reasoning_mode=None):
     """
     Analyzes the query using the coordinator model to identify appropriate labels.
     
@@ -15,6 +15,7 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
         coordinator_model: The model to use for coordination
         openrouter_models: List of available models
         coordinator_history: Previous conversation with coordinator (optional)
+        reasoning_mode: The reasoning mode for OpenRouter API (optional)
     """
     # Load available labels from the model_roles.json file
     roles_data = load_json('data/model_roles.json')
@@ -173,7 +174,7 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
     
     return fallback_labels
 
-def coordinate_agents(query, coordinator_model, labels, openrouter_models, option, agent_history=None):
+def coordinate_agents(query, coordinator_model, labels, openrouter_models, option, agent_history=None, reasoning_mode=None):
     """
     Coordinates the selected agents, calls them with appropriate roles,
     and synthesizes a final response.
@@ -185,6 +186,7 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
         openrouter_models: List of available models
         option: Selection strategy (free, paid, optimized)
         agent_history: Previous conversations with agents (optional)
+        reasoning_mode: The reasoning mode for OpenRouter API (optional)
     
     Returns:
         Tuple of (final_answer, updated_agent_history)
@@ -954,7 +956,8 @@ def process_query(query, coordinator_model, option, openrouter_models, coordinat
     try:
         # Step 1: Determine appropriate labels for the query
         labels = determine_query_labels(query, coordinator_model, openrouter_models, 
-                                       coordinator_history=coordinator_history)
+                                       coordinator_history=coordinator_history,
+                                       reasoning_mode=reasoning_mode)
         
         if not labels:
             logger.warning("No labels determined for query")
@@ -965,7 +968,8 @@ def process_query(query, coordinator_model, option, openrouter_models, coordinat
         # Step 2: Coordinate the agents to generate a response
         final_answer, updated_agent_history = coordinate_agents(
             query, coordinator_model, labels, openrouter_models, option,
-            agent_history=agent_history
+            agent_history=agent_history,
+            reasoning_mode=reasoning_mode
         )
         
     except ValueError as e:
