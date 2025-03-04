@@ -293,19 +293,22 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
     
     return valid_labels
 
-def update_model_labels():
+def update_model_labels(min_date=None):
     """
     OpenRouter API'den model listesini çeker ve model_labels.json dosyasını günceller.
     Mevcut etiketleri korur ve yeni modeller için otomatik etiketleme yapar.
     ÖNEMLİ: Tüm etiketlerin model_roles.json'da tanımlı olduğunu doğrular.
+    
+    Args:
+        min_date: Optional date string in format 'YYYY-MM-DD' to filter models created after this date
     """
     # Mevcut dosyaları yedekle
     if not backup_file(MODEL_LABELS_FILE):
         # Web arayüzünde çalıştığında input sorun yaratabilir, bu yüzden yedekleme hatası olsa bile devam et
         logger.warning("Yedekleme yapılamadı, devam ediliyor...")
     
-    # Veri kaynaklarını yükle
-    openrouter_models = get_openrouter_models()
+    # Veri kaynaklarını yükle - artık tarih filtresi ile
+    openrouter_models = get_openrouter_models(min_date=min_date, sort_by_newest=True)
     available_labels = get_available_labels()
     existing_labels = get_existing_model_labels()
     
@@ -401,4 +404,18 @@ def update_model_labels():
 
 if __name__ == "__main__":
     logger.info("Model etiketleri güncelleme aracı başlatılıyor...")
-    update_model_labels()
+    
+    import argparse
+    
+    # Command line arguments
+    parser = argparse.ArgumentParser(description="Update model labels from OpenRouter API")
+    parser.add_argument("--min-date", 
+                      help="Filter models created after this date (format: YYYY-MM-DD)",
+                      default=None)
+    
+    args = parser.parse_args()
+    
+    if args.min_date:
+        logger.info(f"Filtering models created after {args.min_date}")
+    
+    update_model_labels(min_date=args.min_date)

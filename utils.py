@@ -148,10 +148,17 @@ def get_model_description(model_id):
         logger.debug(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
-def get_openrouter_models():
+def get_openrouter_models(min_date=None, sort_by_newest=True):
     """
     Fetches available models from OpenRouter API.
     No retry logic - immediately return error if API call fails.
+    
+    Args:
+        min_date: Optional date string in format 'YYYY-MM-DD' to filter models created after this date
+        sort_by_newest: Whether to sort models by newest first (default: True)
+    
+    Returns:
+        List of model data dictionaries
     """
     if not OPENROUTER_API_KEY:
         return []
@@ -173,6 +180,42 @@ def get_openrouter_models():
         
         # Log the number of models retrieved
         logger.info(f"Successfully retrieved {len(models_data)} models from OpenRouter")
+        
+        # Filter by date if min_date is provided
+        if min_date:
+            try:
+                import datetime
+                min_datetime = datetime.datetime.strptime(min_date, '%Y-%m-%d')
+                filtered_models = []
+                
+                for model in models_data:
+                    # Check if created_at exists
+                    if 'created_at' in model:
+                        try:
+                            # Convert to datetime object (assuming ISO format)
+                            model_date = datetime.datetime.fromisoformat(model['created_at'].replace('Z', '+00:00'))
+                            if model_date >= min_datetime:
+                                filtered_models.append(model)
+                        except (ValueError, TypeError):
+                            # If date conversion fails, keep the model (be inclusive)
+                            filtered_models.append(model)
+                    else:
+                        # If no date information, keep the model (be inclusive)
+                        filtered_models.append(model)
+                
+                logger.info(f"Filtered to {len(filtered_models)} models after {min_date}")
+                models_data = filtered_models
+        
+        # Sort by newest first if requested
+        if sort_by_newest and models_data:
+            # Check if the first model has created_at field
+            if 'created_at' in models_data[0]:
+                try:
+                    # Sort by created_at field (newest first)
+                    models_data.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+                    logger.info("Models sorted by newest first")
+                except Exception as sort_error:
+                    logger.warning(f"Error sorting models by date: {str(sort_error)}")
         
         return models_data
         

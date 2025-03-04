@@ -105,6 +105,7 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
     Selects the most cost-effective models from the matching candidates.
     Includes consideration for provider diversity and model family diversity.
     Filters out beta/alpha models for stability.
+    Prioritizes newer models over older ones when available.
     """
     if not openrouter_models:
         return []
@@ -135,6 +136,9 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
                 prompt_cost = float(matched_model.get('pricing', {}).get('prompt', float('inf')))
                 completion_cost = float(matched_model.get('pricing', {}).get('completion', float('inf')))
                 context_length = int(matched_model.get('context_length', 1000))
+                
+                # Get created_at date for recency (if available)
+                created_at = matched_model.get('created_at', '')
                 
                 # Dynamic token estimation based on query complexity
                 estimated_input_tokens = min(500, len(query_labels) * 100 + 300)
@@ -177,11 +181,28 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
                     family_key = model_name
                 
                 # Combined score (lower is better)
-                total_score = efficiency * 0.3 - relevance_score * 0.7
-                model_costs.append((model_name, total_score, provider, family_key))
+                # Add recency bonus: newer models get a slight boost (negative value improves score)
+                recency_bonus = 0
+                if created_at:
+                    try:
+                        import datetime
+                        # Estimate how recent the model is (in days)
+                        creation_date = datetime.datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                        now = datetime.datetime.now(datetime.timezone.utc)
+                        days_old = (now - creation_date).days
+                        # Apply recency bonus: newer models get better scores
+                        # Cap at 90 days (~3 months) for a maximum 0.2 bonus
+                        recency_bonus = min(days_old / 450, 0.2)  # Older models get penalties up to 0.2
+                    except (ValueError, TypeError):
+                        # If date parsing fails, no recency bonus
+                        pass
+                
+                # Final score calculation with recency bonus
+                total_score = efficiency * 0.3 - relevance_score * 0.7 + recency_bonus
+                model_costs.append((model_name, total_score, provider, family_key, created_at))
             except (KeyError, TypeError) as e:
                 logger.error(f"Error processing pricing for {model_name}: {e}")
-                model_costs.append((model_name, float('inf'), "unknown", "unknown"))
+                model_costs.append((model_name, float('inf'), "unknown", "unknown", ""))
         else:
             # If model not found in OpenRouter, give it an infinite cost
             logger.warning(f"Model {model_name} not found in OpenRouter models")
@@ -216,7 +237,7 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
             else:
                 family_key = model_name
                 
-            model_costs.append((model_name, float('inf'), provider, family_key))
+            model_costs.append((model_name, float('inf'), provider, family_key, ""))
 
     # Sort by score (lower is better)
     model_costs.sort(key=lambda x: x[1])
@@ -226,7 +247,7 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
     family_selected = set()
     optimized_models = []
     
-    for model, _, provider, family_key in model_costs:
+    for model, _, provider, family_key, _ in model_costs:
         # Skip if we've already selected a model from this family or too many from this provider
         if family_key in family_selected or provider_counts.get(provider, 0) >= 2:
             continue
