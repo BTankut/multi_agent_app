@@ -205,11 +205,19 @@ def get_openrouter_models(min_date=None, sort_by_newest=True):
                 
                 logger.info(f"Filtered to {len(filtered_models)} models after {min_date}")
                 models_data = filtered_models
+            except Exception as filter_error:
+                logger.warning(f"Error during date filtering: {str(filter_error)}")
         
         # Sort by newest first if requested
         if sort_by_newest and models_data:
-            # Check if the first model has created_at field
-            if 'created_at' in models_data[0]:
+            # Check if models have created_at field
+            has_created_at = False
+            for model in models_data:
+                if 'created_at' in model:
+                    has_created_at = True
+                    break
+                
+            if has_created_at:
                 try:
                     # Sort by created_at field (newest first)
                     models_data.sort(key=lambda x: x.get('created_at', ''), reverse=True)
