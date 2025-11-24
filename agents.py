@@ -134,6 +134,97 @@ def get_tier_bonus(tier):
     }
     return tier_bonuses.get(tier, 0.0)
 
+def find_model_in_catalog(model_name, openrouter_models):
+    """
+    Finds a model entry in the OpenRouter catalog by exact or partial match.
+    """
+    if not openrouter_models:
+        return None
+
+    for model in openrouter_models:
+        model_id = model.get('id', '')
+        if model_id == model_name or model_name in model_id:
+            return model
+    return None
+
+def extract_provider_and_family(model_name):
+    """
+    Extracts provider and a normalized family key from a model identifier.
+    The family key keeps one representative per major model family.
+    """
+    provider = model_name.split('/')[0] if '/' in model_name else "unknown"
+    
+    model_parts = model_name.split('/')
+    if len(model_parts) > 1:
+        name = model_parts[1]
+        # Extract model family core name (e.g. dolphin, claude-3, llama)
+        if "dolphin" in name.lower():
+            family_key = f"{provider}/dolphin"
+        elif "claude" in name.lower():
+            name_parts = name.split('-')
+            if len(name_parts) > 1:
+                family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+            else:
+                family_key = f"{provider}/{name_parts[0]}"
+        elif "mistral" in name.lower():
+            family_key = f"{provider}/mistral"
+        elif "llama" in name.lower():
+            family_key = f"{provider}/llama"
+        else:
+            name_parts = name.split('-')
+            if len(name_parts) > 1:
+                family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
+            else:
+                family_key = f"{provider}/{name_parts[0]}"
+    else:
+        family_key = model_name
+        
+    return provider, family_key
+
+def prioritize_models_by_tier(models, openrouter_models):
+    """
+    Returns models sorted to emphasize tier priority, availability, and recency.
+    Lower tier is always favored; newer catalog entries are preferred within the same tier.
+    """
+    if not models:
+        return []
+
+    prioritized = []
+    for model in models:
+        tier = get_model_tier(model)
+        catalog_entry = find_model_in_catalog(model, openrouter_models)
+        days_old = 9999
+        if catalog_entry:
+            created_at = catalog_entry.get('created_at', '')
+            if created_at:
+                try:
+                    import datetime
+                    creation_date = datetime.datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    now = datetime.datetime.now(datetime.timezone.utc)
+                    days_old = max((now - creation_date).days, 0)
+                except (ValueError, TypeError):
+                    pass
+        availability_penalty = 0 if catalog_entry else 1
+        prioritized.append(((tier, availability_penalty, days_old), model))
+
+    prioritized.sort(key=lambda x: x[0])
+    return [model for _, model in prioritized]
+
+def deduplicate_preserve_order(models):
+    """
+    Removes duplicates while preserving the original order.
+    """
+    if not models:
+        return []
+
+    seen = set()
+    unique_models = []
+    for model in models:
+        if model not in seen:
+            unique_models.append(model)
+            seen.add(model)
+    return unique_models
+
 def get_labels_for_model(model_name):
     """
     Returns the labels associated with a specific model.
@@ -179,7 +270,7 @@ def get_models_by_labels(labels, option, openrouter_models, min_models=1, max_mo
     """
     Selects models based on labels, user option, and OpenRouter models.
     Respects min_models and max_models constraints.
-    Limits models per provider to avoid rate limiting issues.
+    Limits models per provider with tier-aware rules to keep premium models in every mode.
     """
     model_labels_data = load_json("data/model_labels.json")
     if not model_labels_data:
@@ -207,25 +298,49 @@ def get_models_by_labels(labels, option, openrouter_models, min_models=1, max_mo
         filtered_models = select_optimized_models(matching_models, labels, openrouter_models)
     else:
         return []
+
+    filtered_models = deduplicate_preserve_order(filtered_models)
     
-    # Enforce min_models and max_models constraints
-    if len(filtered_models) < min_models and option == "optimized":
-        # Try to find additional models from all available models
-        all_models = [entry["model"] for entry in model_labels_data]
-        additional_models = select_optimized_models(all_models, labels, openrouter_models)
-        
-        for model in additional_models:
-            if model not in filtered_models:
-                filtered_models.append(model)
+    # Enforce min_models with option-aware fallbacks
+    if len(filtered_models) < min_models:
+        if option == "optimized":
+            # Try to find additional models from all available models with optimization scoring
+            all_models = [entry["model"] for entry in model_labels_data]
+            additional_models = select_optimized_models(all_models, labels, openrouter_models)
+            for model in additional_models:
+                if model not in filtered_models:
+                    filtered_models.append(model)
+                if len(filtered_models) >= min_models:
+                    break
+        else:
+            # Broaden pool while respecting the free/paid constraint
+            allowed_pool = []
+            for entry in model_labels_data:
+                if option == "free" and "free" in entry["labels"]:
+                    allowed_pool.append(entry["model"])
+                elif option == "paid" and "free" not in entry["labels"]:
+                    allowed_pool.append(entry["model"])
+            for model in prioritize_models_by_tier(allowed_pool, openrouter_models):
+                if model not in filtered_models:
+                    filtered_models.append(model)
                 if len(filtered_models) >= min_models:
                     break
     
-    # Apply max_models constraint if specified
+    # Tier-first ordering before diversity filtering
+    filtered_models = prioritize_models_by_tier(filtered_models, openrouter_models)
+    
+    # Apply provider diversity constraints with tier-aware limits and global caps
+    filtered_models = limit_models_per_provider(
+        filtered_models, 
+        max_per_provider=2, 
+        min_models=min_models, 
+        max_models=max_models, 
+        openrouter_models=openrouter_models
+    )
+    
+    # Ensure we don't exceed the max_models constraint after relaxing diversity rules
     if max_models is not None:
         filtered_models = filtered_models[:max_models]
-    
-    # Apply provider diversity constraints to ensure we don't overuse any single provider
-    filtered_models = limit_models_per_provider(filtered_models, max_per_provider=2)
     
     return filtered_models
 
@@ -245,6 +360,8 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
         # Skip beta/alpha models for stability
         if ":beta" in model_name or ":alpha" in model_name:
             continue
+
+        provider, family_key = extract_provider_and_family(model_name)
             
         # Check if the model exists in our model_labels.json
         model_labels = get_labels_for_model(model_name)
@@ -252,13 +369,7 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
             continue
 
         # Look for the model in openrouter_models
-        matched_model = None
-        for model in openrouter_models:
-            # Remove any prefix from the model name for matching purposes
-            model_id = model.get('id', '')
-            if model_id == model_name or model_name in model_id:
-                matched_model = model
-                break
+        matched_model = find_model_in_catalog(model_name, openrouter_models)
         
         if matched_model:
             try:
@@ -277,39 +388,6 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
                 # Calculate total cost using the formula
                 efficiency = ((prompt_cost + completion_cost) * context_length) / 1000.0
                 relevance_score = sum(1 for label in query_labels if label in model_labels)
-                
-                # Extract provider for diversity bonus
-                provider = model_name.split('/')[0] if '/' in model_name else "unknown"
-                
-                # Extract model family
-                model_parts = model_name.split('/')
-                if len(model_parts) > 1:
-                    # Remove version indicators like "r1" to better identify base model family
-                    name = model_parts[1]
-                    # Extract model family core name (e.g. "dolphin3.0" or "claude-3")
-                    if "dolphin" in name.lower():
-                        family_key = f"{provider}/dolphin"
-                    elif "claude" in name.lower():
-                        # For claude models, use more specific versioning (claude-3, claude-2, etc.)
-                        name_parts = name.split('-')
-                        if len(name_parts) > 1:
-                            family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
-                        else:
-                            family_key = f"{provider}/{name_parts[0]}"
-                    elif "mistral" in name.lower():
-                        family_key = f"{provider}/mistral"
-                    elif "llama" in name.lower():
-                        family_key = f"{provider}/llama"
-                    else:
-                        # Default to first two segments for other models
-                        name_parts = name.split('-')
-                        if len(name_parts) > 1:
-                            family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
-                        else:
-                            family_key = f"{provider}/{name_parts[0]}"
-                else:
-                    family_key = model_name
-                
                 # Combined score (lower is better)
                 # Add recency bonus: newer models get a slight boost (negative value improves score)
                 recency_bonus = 0
@@ -346,36 +424,6 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
         else:
             # If model not found in OpenRouter, give it an infinite cost
             logger.warning(f"Model {model_name} not found in OpenRouter models")
-            provider = model_name.split('/')[0] if '/' in model_name else "unknown"
-            
-            # Extract model family for consistency
-            model_parts = model_name.split('/')
-            if len(model_parts) > 1:
-                # Remove version indicators like "r1" to better identify base model family
-                name = model_parts[1]
-                # Extract model family core name (e.g. "dolphin3.0" or "claude-3")
-                if "dolphin" in name.lower():
-                    family_key = f"{provider}/dolphin"
-                elif "claude" in name.lower():
-                    # For claude models, use more specific versioning (claude-3, claude-2, etc.)
-                    name_parts = name.split('-')
-                    if len(name_parts) > 1:
-                        family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
-                    else:
-                        family_key = f"{provider}/{name_parts[0]}"
-                elif "mistral" in name.lower():
-                    family_key = f"{provider}/mistral"
-                elif "llama" in name.lower():
-                    family_key = f"{provider}/llama"
-                else:
-                    # Default to first two segments for other models
-                    name_parts = name.split('-')
-                    if len(name_parts) > 1:
-                        family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
-                    else:
-                        family_key = f"{provider}/{name_parts[0]}"
-            else:
-                family_key = model_name
                 
             model_costs.append((model_name, float('inf'), provider, family_key, ""))
 
@@ -439,11 +487,11 @@ def calculate_similarity(response1, response2):
     
     return min(randomized_similarity, 1.0)
 
-def limit_models_per_provider(models, max_per_provider=2):
+def limit_models_per_provider(models, max_per_provider=2, min_models=0, max_models=None, openrouter_models=None):
     """
     Limits the number of models from each provider to avoid rate limiting issues.
-    Returns a list of models with at most max_per_provider models from each provider.
-    Also ensures model family diversity (avoids multiple models from same family).
+    Tier 1-2 models can take up to 3 slots per provider, Tier 3-4 models respect max_per_provider.
+    Honors min_models/max_models and keeps model family diversity while preferring higher tiers.
     Filters out beta models for stability.
     
     Example:
@@ -452,14 +500,16 @@ def limit_models_per_provider(models, max_per_provider=2):
     """
     if not models:
         return []
-        
+
+    # Strongly prioritize known premium tiers before applying diversity rules
+    prioritized_models = prioritize_models_by_tier(models, openrouter_models or [])
     provider_counts = {}      # Count by provider (e.g., "anthropic")
     family_selected = set()   # Track which model families we've already selected
     diversified_models = []
     
     # First pass - filter out beta models and sort by preference
     stable_models = []
-    for model in models:
+    for model in prioritized_models:
         # Skip beta/alpha models for stability
         if ":beta" in model or ":alpha" in model:
             continue
@@ -469,53 +519,36 @@ def limit_models_per_provider(models, max_per_provider=2):
     
     # If filtering removed all models, revert to original list
     if not stable_models and models:
-        stable_models = models
+        stable_models = prioritized_models
     
     # Now process the filtered models
     for model in stable_models:
-        # Extract provider from model name (assuming format is provider/model_name)
-        provider = model.split('/')[0] if '/' in model else "unknown"
-        
-        # Extract model family (e.g., "claude-3" from "anthropic/claude-3-sonnet")
-        model_parts = model.split('/')
-        if len(model_parts) > 1:
-            # Remove version indicators like "r1" to better identify base model family
-            name = model_parts[1]
-            # Extract model family core name (e.g. "dolphin3.0" or "claude-3")
-            if "dolphin" in name.lower():
-                family_key = f"{provider}/dolphin"
-            elif "claude" in name.lower():
-                # For claude models, use more specific versioning (claude-3, claude-2, etc.)
-                name_parts = name.split('-')
-                if len(name_parts) > 1:
-                    family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
-                else:
-                    family_key = f"{provider}/{name_parts[0]}"
-            elif "mistral" in name.lower():
-                family_key = f"{provider}/mistral"
-            elif "llama" in name.lower():
-                family_key = f"{provider}/llama"
-            else:
-                # Default to first two segments for other models
-                name_parts = name.split('-')
-                if len(name_parts) > 1:
-                    family_key = f"{provider}/{name_parts[0]}-{name_parts[1]}"
-                else:
-                    family_key = f"{provider}/{name_parts[0]}"
-        else:
-            family_key = model
-            
+        provider, family_key = extract_provider_and_family(model)
+        model_tier = get_model_tier(model)
+        provider_limit = 3 if model_tier <= 2 else max_per_provider
+
         # Skip if we've already selected from this model family or reached provider limit
-        if family_key in family_selected or provider_counts.get(provider, 0) >= max_per_provider:
+        provider_at_limit = provider_counts.get(provider, 0) >= provider_limit
+        family_taken = family_key in family_selected
+
+        if (provider_at_limit or family_taken) and len(diversified_models) >= min_models:
             continue
             
         # Add model and increment provider count
         diversified_models.append(model)
         provider_counts[provider] = provider_counts.get(provider, 0) + 1
         family_selected.add(family_key)
+
+        # Emit debug logs for premium picks
+        if model_tier <= 2:
+            logger.info(f"Selected premium model: {model} (Tier {model_tier}, provider {provider})")
+
+        # Obey overall max model count if provided
+        if max_models is not None and len(diversified_models) >= max_models:
+            break
             
     # Log the model selection for debugging
-    logger.info(f"Selected {len(diversified_models)} models after applying provider diversity constraints")
+    logger.info(f"Selected {len(diversified_models)} models after applying tier-aware provider diversity constraints")
     for provider, count in provider_counts.items():
         if count > 0:
             logger.info(f"  - {provider}: {count} models")
