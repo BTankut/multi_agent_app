@@ -503,6 +503,13 @@
     ]
   },
   {
+    "model": "arcee-ai/afm-4.5b",
+    "labels": [
+      "general_assistant",
+      "paid"
+    ]
+  },
+  {
     "model": "opengvlab/internvl3-78b",
     "labels": [
       "general_assistant",

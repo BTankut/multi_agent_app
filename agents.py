@@ -5,6 +5,135 @@ from utils import load_json, call_agent
 # Initialize logger
 logger = logging.getLogger(__name__)
 
+# Model Tier System for prioritization (Updated: November 2025)
+# Lower tier number = higher priority in selection
+MODEL_TIERS = {
+    # Tier 1: Premium - Latest flagship models (Nov 2025)
+    1: [
+        # OpenAI GPT-5 Series (Latest - Nov 2025)
+        "openai/gpt-5.1",
+        "openai/gpt-5.1-chat",
+        "openai/gpt-5.1-codex",
+        "openai/gpt-5.1-codex-mini",
+        "openai/gpt-5-pro",
+        "openai/gpt-5-codex",
+        "openai/gpt-5-image",
+        # OpenAI O-Series (Reasoning)
+        "openai/o3-deep-research",
+        "openai/o4-mini-deep-research",
+        "openai/o1",
+        # Google Gemini 3 Series (Latest)
+        "google/gemini-3-pro-preview",
+        "google/gemini-3-pro-image-preview",
+        # Anthropic Claude 4 Series
+        "anthropic/claude-sonnet-4.5",
+        "anthropic/claude-opus-4",
+        "anthropic/claude-opus-4.1",
+        "anthropic/claude-haiku-4.5",
+        # DeepSeek R1 (Reasoning)
+        "deepseek/deepseek-r1",
+        "deepseek/deepseek-r1-0528",
+        # X.AI Grok 4 Series
+        "x-ai/grok-4",
+        "x-ai/grok-4-fast",
+        "x-ai/grok-4.1-fast",
+    ],
+    # Tier 2: Strong - Reliable high-performance models
+    2: [
+        # OpenAI GPT-4 Series
+        "openai/gpt-4o",
+        "openai/gpt-4o-mini",
+        "openai/gpt-4.1",
+        "openai/gpt-4.1-mini",
+        "openai/o1-mini",
+        "openai/o1-preview",
+        # Google Gemini 2.5
+        "google/gemini-2.5-pro",
+        "google/gemini-2.5-flash",
+        "google/gemini-2.5-flash-lite",
+        # Anthropic Claude 3.7
+        "anthropic/claude-3.7-sonnet",
+        "anthropic/claude-3.5-sonnet",
+        # DeepSeek V3
+        "deepseek/deepseek-chat-v3",
+        "deepseek/deepseek-v3",
+        "deepseek/deepseek-v3.1-terminus",
+        "deepseek/deepseek-v3.2-exp",
+        # X.AI Grok 3
+        "x-ai/grok-3",
+        "x-ai/grok-3-mini",
+        # Qwen 3 Max
+        "qwen/qwen3-max",
+        "qwen/qwen3-coder-plus",
+        "qwen/qwen-plus",
+        # Meta Llama 3.3
+        "meta-llama/llama-3.3-70b-instruct",
+        "meta-llama/llama-3.1-405b-instruct",
+    ],
+    # Tier 3: Good - Solid mid-tier models
+    3: [
+        # OpenAI GPT-4 Base
+        "openai/gpt-4-turbo",
+        "openai/gpt-4",
+        "openai/chatgpt-4o-latest",
+        # Google Gemini 2.0
+        "google/gemini-2.0-flash",
+        "google/gemini-flash-1.5",
+        # Anthropic Claude 3
+        "anthropic/claude-3-opus",
+        "anthropic/claude-3-sonnet",
+        "anthropic/claude-3-haiku",
+        "anthropic/claude-3.5-haiku",
+        # Mistral
+        "mistralai/mistral-large",
+        "mistralai/mistral-medium",
+        "mistralai/mistral-small",
+        # Qwen 3 Base
+        "qwen/qwen3-next-80b-a3b-thinking",
+        "qwen/qwen3-vl-235b-a22b-thinking",
+        # Nous Research
+        "nousresearch/hermes-4-405b",
+        "nousresearch/hermes-4-70b",
+        # Meta Llama 3.1
+        "meta-llama/llama-3.1-70b-instruct",
+        "meta-llama/llama-3-70b-instruct",
+        # Others
+        "cohere/command-r-plus",
+        "mistralai/mixtral-8x7b-instruct",
+    ]
+    # Tier 4 (Unknown/Experimental): All other models not listed above
+}
+
+def get_model_tier(model_name):
+    """
+    Returns the tier number for a given model.
+    Lower tier = higher priority.
+    Returns 4 for unknown models.
+    """
+    for tier, models in MODEL_TIERS.items():
+        # Check exact match or if model_name contains the tier model pattern
+        for tier_model in models:
+            if model_name == tier_model or tier_model in model_name:
+                return tier
+    return 4  # Unknown/Experimental models
+
+def get_tier_bonus(tier):
+    """
+    Returns the scoring bonus for a given tier.
+    Lower score = better priority in selection.
+
+    IMPORTANT: Tier bonuses are VERY strong to ensure flagship models
+    (GPT-5.1, Claude 4, Gemini-3) are prioritized over unknown models,
+    even if unknown models have slightly better relevance scores.
+    """
+    tier_bonuses = {
+        1: -5.0,  # Premium flagship models get massive bonus
+        2: -2.5,  # Strong models get large bonus
+        3: -1.0,  # Good models get moderate bonus
+        4: 0.0    # Unknown models get no bonus
+    }
+    return tier_bonuses.get(tier, 0.0)
+
 def get_labels_for_model(model_name):
     """
     Returns the labels associated with a specific model.
@@ -106,6 +235,7 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
     Includes consideration for provider diversity and model family diversity.
     Filters out beta/alpha models for stability.
     Prioritizes newer models over older ones when available.
+    Uses tier system to prioritize well-known flagship models (Claude, GPT-4, Gemini, etc.)
     """
     if not openrouter_models:
         return []
@@ -197,8 +327,18 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
                         # If date parsing fails, no recency bonus
                         pass
                 
-                # Final score calculation with recency bonus
-                total_score = efficiency * 0.3 - relevance_score * 0.7 + recency_bonus
+                # Get tier bonus for prioritizing known good models
+                model_tier = get_model_tier(model_name)
+                tier_bonus = get_tier_bonus(model_tier)
+
+                # Final score calculation with recency and tier bonuses
+                # Lower score = better (tier bonus is negative for good models)
+                total_score = efficiency * 0.3 - relevance_score * 0.7 + recency_bonus + tier_bonus
+
+                # Log tier information for debugging
+                if model_tier <= 2:
+                    logger.info(f"Premium/Strong model detected: {model_name} (Tier {model_tier}, bonus: {tier_bonus})")
+
                 model_costs.append((model_name, total_score, provider, family_key, created_at))
             except (KeyError, TypeError) as e:
                 logger.error(f"Error processing pricing for {model_name}: {e}")
@@ -241,21 +381,37 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
 
     # Sort by score (lower is better)
     model_costs.sort(key=lambda x: x[1])
-    
+
     # Implement manual provider diversity and model family diversity
+    # IMPORTANT: Tier 1-2 models bypass provider limits to ensure premium models are always selected
     provider_counts = {}
     family_selected = set()
     optimized_models = []
-    
+
     for model, _, provider, family_key, _ in model_costs:
-        # Skip if we've already selected a model from this family or too many from this provider
-        if family_key in family_selected or provider_counts.get(provider, 0) >= 2:
+        # Check model tier
+        model_tier = get_model_tier(model)
+
+        # Skip if we've already selected a model from this family
+        if family_key in family_selected:
             continue
-            
+
+        # For Tier 1-2 models, allow up to 3 models per provider (premium models get priority)
+        # For Tier 3-4 models, limit to 2 models per provider
+        max_per_provider = 3 if model_tier <= 2 else 2
+
+        # Skip if too many models from this provider (respecting tier-based limits)
+        if provider_counts.get(provider, 0) >= max_per_provider:
+            continue
+
         # Add model and update tracking
         optimized_models.append(model)
         provider_counts[provider] = provider_counts.get(provider, 0) + 1
         family_selected.add(family_key)
+
+        # Log tier 1-2 selections for debugging
+        if model_tier <= 2:
+            logger.info(f"Selected premium model: {model} (Tier {model_tier})")
     
     return optimized_models
 
