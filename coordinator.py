@@ -360,6 +360,9 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                             # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
                             cost_str = f"{metadata['cost']:.6f}".rstrip('0').rstrip('.').replace(".", ",")
                             st.session_state.process_log.append(f"  • Estimated cost: ${cost_str}/1M tokens")
+                        # Notify user if reasoning was disabled for this model
+                        if metadata.get("reasoning_fallback"):
+                            st.session_state.process_log.append(f"  ⚠️ {model_name} does not support reasoning mode, continued without it")
                 else:
                     # Old format fallback
                     agent_responses[model_name] = response_tuple
@@ -837,6 +840,9 @@ REASONING APPROACH:
                         # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
                         cost_str = f"{coordinator_metadata['cost']:.6f}".rstrip('0').rstrip('.').replace(".", ",")
                         st.session_state.process_log.append(f"  • Coordinator cost: ${cost_str}/1M tokens")
+                    # Notify user if reasoning was disabled for coordinator
+                    if coordinator_metadata.get("reasoning_fallback"):
+                        st.session_state.process_log.append(f"  ⚠️ Coordinator model does not support reasoning mode, continued without it")
             else:
                 # Backward compatibility
                 final_answer = response_tuple

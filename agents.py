@@ -147,6 +147,36 @@ def find_model_in_catalog(model_name, openrouter_models):
             return model
     return None
 
+def is_text_compatible_model(model_name, openrouter_models):
+    """
+    Checks if a model is compatible with text-to-text queries.
+    Returns True if the model can output text, False if it's image-only.
+
+    Filters out:
+    - Models that don't have 'text' in output_modalities
+    - Models specifically designed for image generation (image-preview, image-generation in name)
+    """
+    # Check model name for image-specific indicators
+    image_only_patterns = ['-image-preview', '-image-generation', '/image-', '-to-image']
+    model_lower = model_name.lower()
+    for pattern in image_only_patterns:
+        if pattern in model_lower:
+            logger.info(f"Filtering out image-focused model: {model_name}")
+            return False
+
+    # Check OpenRouter architecture info
+    model_info = find_model_in_catalog(model_name, openrouter_models)
+    if model_info:
+        architecture = model_info.get('architecture', {})
+        output_modalities = architecture.get('output_modalities', [])
+
+        # If output_modalities is specified and doesn't include 'text', filter out
+        if output_modalities and 'text' not in output_modalities:
+            logger.info(f"Filtering out non-text output model: {model_name} (outputs: {output_modalities})")
+            return False
+
+    return True
+
 def extract_provider_and_family(model_name):
     """
     Extracts provider and a normalized family key from a model identifier.
@@ -266,28 +296,39 @@ def get_model_roles(selected_models, labels):
     
     return model_roles
 
-def get_models_by_labels(labels, option, openrouter_models, min_models=1, max_models=None):
+def get_models_by_labels(labels, option, openrouter_models, min_models=1, max_models=None, text_only=True):
     """
     Selects models based on labels, user option, and OpenRouter models.
     Respects min_models and max_models constraints.
     Limits models per provider with tier-aware rules to keep premium models in every mode.
+
+    Args:
+        text_only: If True, filters out image-only models that can't handle text-to-text queries (default: True)
     """
     model_labels_data = load_json("data/model_labels.json")
     if not model_labels_data:
         return []
-    
+
     # Find models matching the required labels
     matching_models = []
     for model_entry in model_labels_data:
         if any(label in model_entry["labels"] for label in labels):
             matching_models.append(model_entry["model"])
-            
+
     # If no models match the specified labels, fallback to general_assistant models
     if not matching_models:
         logger.warning(f"No models found for labels: {', '.join(labels)}. Falling back to general_assistant.")
         for model_entry in model_labels_data:
             if "general_assistant" in model_entry["labels"]:
                 matching_models.append(model_entry["model"])
+
+    # Filter out image-only models for text-to-text queries
+    if text_only and openrouter_models:
+        text_compatible_models = [m for m in matching_models if is_text_compatible_model(m, openrouter_models)]
+        filtered_count = len(matching_models) - len(text_compatible_models)
+        if filtered_count > 0:
+            logger.info(f"Filtered out {filtered_count} image-only models for text query")
+        matching_models = text_compatible_models
     
     # Filter based on user option
     if option == "free":

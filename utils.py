@@ -401,27 +401,27 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                 "messages": messages
             }
             
-            # Add reasoning based on reasoning_mode setting
+            # Determine if reasoning should be enabled based on reasoning_mode setting
+            use_reasoning = False
             if reasoning_mode:
                 if reasoning_mode == "all":
-                    # Enable reasoning for all models
-                    request_payload["reasoning"] = True
+                    use_reasoning = True
                 elif reasoning_mode == "coordinator_only" and is_coordinator:
-                    # Enable reasoning only for coordinator model
-                    request_payload["reasoning"] = True
+                    use_reasoning = True
                 elif reasoning_mode == "auto":
-                    # Auto mode - enable reasoning for coordinator and complex queries
-                    complex_query = len(query) > 200 or any(keyword in query.lower() for keyword in 
+                    complex_query = len(query) > 200 or any(keyword in query.lower() for keyword in
                                                          ["calculate", "math", "reason", "logic", "solve", "proof"])
                     if is_coordinator or complex_query:
-                        request_payload["reasoning"] = True
-            
-            # Log if reasoning is enabled
-            if request_payload.get("reasoning"):
+                        use_reasoning = True
+
+            # Track if reasoning was disabled due to model not supporting it
+            reasoning_fallback_used = False
+
+            # Add reasoning to payload if enabled
+            if use_reasoning:
+                request_payload["reasoning"] = True
                 logger.info(f"Using reasoning mode for model: {model_name}")
-                if 'process_log' in globals() or 'process_log' in locals():
-                    process_log.append(f"Using reasoning mode for: {model_name}")
-            
+
             # Make API request
             response = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
@@ -429,6 +429,19 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                 json=request_payload,
                 timeout=45
             )
+
+            # If 400 error and reasoning was enabled, retry without reasoning
+            if response.status_code == 400 and use_reasoning:
+                logger.warning(f"Model {model_name} does not support reasoning, retrying without it")
+                reasoning_fallback_used = True
+                request_payload.pop("reasoning", None)
+                response = requests.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers=headers,
+                    json=request_payload,
+                    timeout=45
+                )
+
             completion_time = time.time() - start_time
             response.raise_for_status()
             result = response.json()
@@ -522,7 +535,8 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                 "tokens": token_usage,
                 "time": completion_time,
                 "cost": cost,
-                "model": model_name
+                "model": model_name,
+                "reasoning_fallback": reasoning_fallback_used
             })
             
         except (requests.exceptions.RequestException, KeyError, ValueError) as e:
