@@ -27,6 +27,8 @@ You simply ask your question; in the background, a massive network of intelligen
 
 ## 🛠️ How It Works
 
+![System Architecture](assets/architecture.png)
+
 1.  **Analysis:** The Coordinator model understands your query and determines the required skill tags.
 2.  **Team Assembly:** Models best suited for the determined tags (OpenAI, Anthropic, Google, Meta, etc.) are selected from the pool.
 3.  **Parallel Processing:** Selected agents start working simultaneously. Each solves the problem according to its own area of expertise.
