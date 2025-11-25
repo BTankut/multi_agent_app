@@ -1,96 +1,68 @@
-# Multi_Agent System
+# 🧠 Multi-Agent AI Orchestrator
 
-A sophisticated system designed to handle user queries by intelligently coordinating multiple AI models through OpenRouter. The system analyzes query content to determine appropriate specialized models, dynamically manages the number of agents based on query complexity, and synthesizes their responses into a cohesive answer.
+![Multi-Agent Orchestrator Banner](assets/banner.png)
 
-## Features
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688.svg)](https://fastapi.tiangolo.com)
+[![Vue.js](https://img.shields.io/badge/Vue.js-3.0+-4FC08D.svg)](https://vuejs.org/)
 
-- Process queries using multiple AI models based on query type and difficulty
-- Optimize model selection considering cost, specialization, and response quality
-- Resolve conflicting responses using specialized reasoning models
-- Provide detailed logging and transparent cost management
-- Present a user-friendly interface with real-time progress tracking
+**Intelligent, Dynamic, and Real-Time AI Orchestration**
 
-## Installation
+## 🌟 About
 
-1. Clone the repository
-2. Install the required dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-3. Create a `.env` file from the `.env-example` template and add your OpenRouter API key:
-   ```
-   cp .env-example .env
-   ```
-   Then edit the `.env` file to add your OpenRouter API key.
+The Multi-Agent AI Orchestrator is a next-generation system that solves complex problems not by relying on a single AI model, but by distributing the task to a **specialized team of agents**.
 
-## Usage
+Acting like a project manager, the **"Coordinator Agent"** analyzes your query, determines the necessary skills (Math, Coding, Creative Writing, Logic, etc.), and assembles the **optimal team** from hundreds of models available via OpenRouter.
 
-### Web Interface (Recommended)
+You simply ask your question; in the background, a massive network of intelligence works, debates, and synthesizes the most accurate result for you.
 
-Run the Streamlit application using our launcher script:
-```
-python run_app.py
-```
+## ✨ Key Features
 
-This will start the Streamlit server and open the web interface in your browser. The interface allows you to:
-- Enter your query in the text area
-- Select a coordinator model (e.g., Claude, GPT)
-- Choose a model selection strategy (free, paid, or optimized)
-- View the processing progress in real-time
-- See the final response
-- Browse your conversation history
+*   **🎭 Dynamic Role Assignment:** Roles such as "Code Expert", "Mathematician", or "Storyteller" are created instantly based on your query.
+*   **🚀 Real-Time Visualization:** Watch how the system thinks, which agents it selects, and their working status on a live, animated network graph.
+*   **🧠 Smart Coordinator:** An intelligent manager that knows which model performs which task better and more cost-effectively.
+*   **⚡ Speed & Efficiency:** Uses a single agent for simple queries ("Hello") to save resources, while calling upon the entire fleet for complex projects.
+*   **🎨 Modern Interface:** A dark-mode supported, sleek, and user-friendly experience designed to minimize eye strain.
 
-### Command Line Interface
+## 🛠️ How It Works
 
-For a simpler experience, you can use the CLI version:
-```
-python multi_agent_cli.py [option]
-```
+1.  **Analysis:** The Coordinator model understands your query and determines the required skill tags.
+2.  **Team Assembly:** Models best suited for the determined tags (OpenAI, Anthropic, Google, Meta, etc.) are selected from the pool.
+3.  **Parallel Processing:** Selected agents start working simultaneously. Each solves the problem according to its own area of expertise.
+4.  **Synthesis:** Responses from all agents are collected by the Coordinator, conflicts are resolved, and a final, polished answer is generated.
 
-Where `[option]` is one of:
-- `free`: Use only free models (default)
-- `paid`: Use only paid models
-- `mixed`: Use a combination of free and paid models
+## 🚀 Installation & Usage
 
-### Testing
+Running the project on your local machine is simple.
 
-To verify that the system is working correctly:
-```
-python quick_test.py
-```
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/BTankut/multi_agent_app.git
+    cd multi_agent_app
+    ```
 
-This will test the core components without making full API calls.
+2.  **Install Requirements:**
+    ```bash
+    pip install -r requirements.txt
+    pip install fastapi uvicorn websockets
+    ```
 
-## System Architecture
+3.  **Set Environment Variables:**
+    Copy `.env-example` to `.env` and add your OpenRouter API key.
+    ```bash
+    OPENROUTER_API_KEY=sk-or-v1-....
+    ```
 
-The system consists of the following components:
+4.  **Run the Application:**
+    ```bash
+    python run_modern_ui_v2.py
+    ```
+    Your browser will open automatically.
 
-- **Coordinator**: Orchestrates the multi-agent workflow, analyzes queries, and synthesizes responses
-- **Agents**: Manages model selection, role assignment, and response generation
-- **Utils**: Handles API integration, error handling, and helper functions
-- **Data Files**: Contains model capabilities and role definitions
+## 📜 License
 
-## Configuration
+This project is licensed under the **MIT License**. This means you are free to use, modify, and distribute it. See the `LICENSE` file for details.
 
-Model configurations and roles are defined in the data directory:
-- `model_labels.json`: Maps models to their capabilities (e.g., code_expert, math_expert)
-- `model_roles.json`: Defines specific prompting instructions for each role
-
-You can customize these files to add or modify model capabilities and roles.
-
-## Dependencies
-
-- Streamlit: Web interface
-- Requests: API communication
-- Python-dotenv: Environment variable management
-- Regex: Pattern matching
-
-## Troubleshooting
-
-If you encounter issues:
-1. Verify your OpenRouter API key is correctly set in the `.env` file
-2. Check that all dependencies are installed with `pip install -r requirements.txt`
-3. Run the `quick_test.py` script to verify core components
-4. Ensure you have sufficient credits in your OpenRouter account
-
-For paid models, you'll need to have your payment method set up with OpenRouter.
+---
+*Designed & Developed by BTankut*
