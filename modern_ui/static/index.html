@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Agent AI System</title>
-    <link rel="icon" type="image/png" href="static/app-logo.png">
+    <link rel="icon" type="image/png" href="/static/app-logo.png">
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -50,11 +50,11 @@
         
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #0f1117;
+            background-color: #111827; /* Slightly lighter dark gray to show transparent patterns */
             color: #e2e8f0;
-            background-image: url('static/bg-pattern.png');
+            background-image: url('/static/bg-pattern.png');
             background-repeat: repeat;
-            background-size: 256px; 
+            background-size: 512px; /* Larger size to see pattern better */
         }
 
         /* Custom Scrollbar */
@@ -170,7 +170,7 @@
             <!-- Header -->
             <div class="p-4 border-b border-gray-700 flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden shadow-lg bg-black/20">
-                    <img src="static/app-logo.png" alt="Logo" class="w-full h-full object-cover">
+                    <img src="/static/app-logo.png" alt="Logo" class="w-full h-full object-cover">
                 </div>
                 <div>
                     <h1 class="font-bold text-white leading-tight">Multi-Agent</h1>
@@ -242,7 +242,7 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col relative bg-gradient-to-b from-gray-900 to-black">
+        <main class="flex-1 flex flex-col relative bg-gradient-to-b from-gray-900/40 to-black/60">
             
             <!-- Toggle Sidebar Button (Mobile/Desktop) -->
             <button @click="sidebarOpen = !sidebarOpen" class="absolute top-4 left-4 z-10 p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700 text-gray-300 transition-colors backdrop-blur-sm">
@@ -256,7 +256,7 @@
                     <!-- Welcome Message -->
                     <div v-if="history.length === 0" class="text-center py-20 space-y-4">
                         <div class="w-24 h-24 mx-auto rounded-2xl flex items-center justify-center shadow-2xl animate-pulse-ring relative overflow-hidden bg-black/20 border border-white/10">
-                            <img src="static/app-logo.png" alt="AI" class="w-full h-full object-cover">
+                            <img src="/static/app-logo.png" alt="AI" class="w-full h-full object-cover">
                         </div>
                         <h2 class="text-3xl font-bold text-white">How can I help you?</h2>
                         <p class="text-gray-400 max-w-md mx-auto">I orchestrate multiple AI agents to solve complex problems. Ask me anything!</p>
@@ -276,7 +276,7 @@
                         <div v-else class="flex justify-start w-full">
                             <div class="flex gap-4 max-w-4xl w-full">
                                 <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center border border-gray-600 overflow-hidden bg-gray-800">
-                                    <img src="static/coordinator-icon.png" alt="Bot" class="w-full h-full object-cover">
+                                    <img src="/static/coordinator-icon.png" alt="Bot" class="w-full h-full object-cover">
                                 </div>
                                 <div class="flex-1 space-y-2">
                                     <!-- Metadata Badge -->
@@ -300,7 +300,7 @@
                                                 <div v-for="(responses, agentName) in msg.agentHistory" :key="agentName" class="bg-gray-800/50 rounded-lg p-3">
                                                     <div class="flex items-center gap-2 mb-2">
                                                         <div class="w-5 h-5 rounded-full overflow-hidden bg-gray-700 border border-gray-600 flex-shrink-0">
-                                                            <img src="static/agent-icon.png" class="w-full h-full object-cover opacity-80">
+                                                            <img src="/static/agent-icon.png" class="w-full h-full object-cover opacity-80">
                                                         </div>
                                                         <span class="text-xs font-bold text-blue-300">{{ agentName }}</span>
                                                     </div>
