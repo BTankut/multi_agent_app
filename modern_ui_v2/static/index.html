@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Orchestrator - Real-Time</title>
+    <link rel="icon" type="image/png" href="/static/app-logo.png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Markdown Renderer -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050505;
+            background-image: url('/static/bg-pattern.png');
+            background-repeat: repeat;
+            background-size: 512px;
+            color: #e2e8f0;
+        }
+
+        /* Node Animations */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); border-color: rgba(59, 130, 246, 0.8); }
+            50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.8); border-color: #60a5fa; }
+        }
+        @keyframes flow-line {
+            to { stroke-dashoffset: 0; }
+        }
+
+        .agent-active { animation: pulse-glow 2s infinite; }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        
+        /* Markdown Styles */
+        .prose pre { background: #1e293b; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; }
+        .prose code { color: #93c5fd; }
+        .prose h3 { color: #f8fafc; font-weight: 700; margin-top: 1.5em; }
+        .prose p { margin-bottom: 0.8em; line-height: 1.7; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex text-gray-300">
+    <div id="app" class="w-full h-full flex relative">
+        
+        <!-- Sidebar (Settings) -->
+        <aside :class="['glass-panel z-30 flex flex-col transition-all duration-300 ease-in-out border-r border-white/10 absolute md:relative h-full', sidebarOpen ? 'w-80 translate-x-0' : 'w-80 -translate-x-full md:w-0 md:translate-x-0 md:overflow-hidden']">
+            <div class="p-4 border-b border-white/10 flex justify-between items-center">
+                <h2 class="font-bold text-white tracking-wide">CONFIGURATION</h2>
+                <button @click="sidebarOpen = false" class="md:hidden text-gray-400 hover:text-white"><i class="ph ph-x"></i></button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-4 space-y-6">
+                <!-- Coordinator Model (Searchable) -->
+                <div class="relative">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Coordinator Model</label>
+                    
+                    <!-- Input -->
+                    <div class="relative">
+                        <input 
+                            ref="modelInput"
+                            type="text" 
+                            v-model="modelSearch" 
+                            @focus="showModelDropdown = true"
+                            @blur="setTimeout(() => showModelDropdown = false, 200)" 
+                            placeholder="Search model..."
+                            class="w-full bg-gray-900 border border-gray-700 text-white text-xs rounded-lg p-2.5 pr-12 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 placeholder-gray-600"
+                        >
+                        
+                        <!-- Clear Button -->
+                        <button 
+                            v-if="modelSearch" 
+                            @click="clearModelSearch"
+                            class="absolute right-8 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors p-1 flex items-center justify-center"
+                        >
+                            <i class="ph ph-x text-xs"></i>
+                        </button>
+
+                        <i class="ph ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none transition-transform duration-200" :class="{'rotate-180': showModelDropdown}"></i>
+                    </div>
+
+                    <!-- Dropdown List -->
+                    <div v-if="showModelDropdown" class="absolute z-50 w-full mt-1 bg-gray-800 border border-gray-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                        <div 
+                            v-for="model in filteredCoordinatorModels" 
+                            :key="model.id"
+                            @click="selectCoordinator(model)"
+                            class="px-3 py-2 text-xs text-gray-300 hover:bg-blue-600 hover:text-white cursor-pointer transition-colors truncate"
+                            :class="{'bg-blue-900/30 text-blue-200': model.id === settings.coordinatorModel}"
+                        >
+                            {{ model.name || model.id.split('/')[1] }}
+                            <span class="text-[9px] opacity-50 ml-1 block text-gray-500">{{ model.id }}</span>
+                        </div>
+                        <div v-if="filteredCoordinatorModels.length === 0" class="px-3 py-2 text-xs text-gray-500 text-center">
+                            No models found
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strategy -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Strategy</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button v-for="opt in ['free', 'paid', 'optimized']" :key="opt" @click="settings.option = opt"
+                            :class="['px-2 py-2 text-xs font-medium rounded border transition-colors capitalize', settings.option === opt ? 'bg-blue-600 border-blue-500 text-white' : 'bg-gray-900 border-gray-700 text-gray-400 hover:border-gray-500']">
+                            {{ opt }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reasoning -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-2">Reasoning Mode</label>
+                    <div class="space-y-2">
+                        <label class="flex items-center gap-2 cursor-pointer" v-for="mode in ['disabled', 'coordinator_only', 'all']" :key="mode">
+                            <input type="radio" v-model="settings.reasoningMode" :value="mode" class="text-blue-600 bg-gray-900 border-gray-700 focus:ring-blue-500">
+                            <span class="text-xs capitalize">{{ mode.replace('_', ' ') }}</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Model Updates -->
+                <div class="pt-4 border-t border-gray-800">
+                    <button @click="fetchModels(true)" :disabled="modelsLoading" class="w-full py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-lg text-xs text-gray-300 transition-colors flex justify-center items-center gap-2">
+                        <i class="ph ph-arrows-clockwise" :class="{'animate-spin': modelsLoading}"></i>
+                        {{ modelsLoading ? 'Updating...' : 'Refresh Model List' }}
+                    </button>
+                    <div class="text-[10px] text-gray-600 text-center mt-2 mono">
+                        Last updated: {{ modelsLastUpdated || 'Never' }}
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Layout -->
+        <div class="flex-1 flex flex-col h-full overflow-hidden relative w-full transition-all duration-300">
+            
+            <!-- Header -->
+            <header class="glass-panel border-b border-white/10 px-4 py-3 flex justify-between items-center z-20">
+                <div class="flex items-center gap-4">
+                    <button @click="sidebarOpen = !sidebarOpen" class="p-2 rounded-lg hover:bg-white/5 text-gray-400 hover:text-white transition-colors">
+                        <i class="ph" :class="sidebarOpen ? 'ph-caret-left' : 'ph-list'"></i>
+                    </button>
+                    <div class="flex items-center gap-3">
+                        <img src="/static/app-logo.png" class="w-8 h-8 rounded-lg shadow-lg">
+                        <div>
+                            <h1 class="font-bold text-white text-sm tracking-wide leading-none">MULTI-AGENT <span class="text-blue-500">ORCHESTRATOR</span></h1>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="w-1.5 h-1.5 rounded-full" :class="isConnected ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-red-500'"></span>
+                                <span class="text-[10px] text-gray-500 mono tracking-wider">{{ isConnected ? 'SYSTEM ONLINE' : 'DISCONNECTED' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-[10px] text-gray-600 mono hidden sm:block">v2.1.0 // WebSocket Stream</div>
+            </header>
+
+            <!-- Content Split -->
+            <main class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+                
+                <!-- Visualization (Left) -->
+                <div class="flex-1 relative bg-gradient-to-b from-gray-900/50 to-black/80 flex flex-col justify-center items-center p-8 min-h-[300px] border-r border-white/5">
+                    
+                    <!-- Coordinator Node -->
+                    <div class="relative z-10 flex flex-col items-center mb-16 group">
+                        <div class="w-24 h-24 rounded-full bg-gray-900 border-2 border-blue-500/50 p-1 shadow-[0_0_50px_rgba(59,130,246,0.2)] z-20 relative transition-all duration-500" :class="{'agent-active': isProcessing}">
+                            <img src="/static/coordinator-icon.png" class="w-full h-full rounded-full object-cover">
+                            <!-- Status Badge -->
+                            <div v-if="isProcessing" class="absolute -top-3 right-0 bg-blue-600 text-white text-[9px] px-2 py-0.5 rounded-full mono animate-pulse shadow-lg border border-blue-400">
+                                BUSY
+                            </div>
+                        </div>
+                        <!-- Coordinator Name Label -->
+                        <div class="mt-4 px-3 py-1.5 bg-gray-800/80 backdrop-blur rounded-lg border border-gray-700 text-center">
+                            <div class="text-[10px] text-blue-400 font-bold uppercase tracking-wider">Coordinator</div>
+                            <div class="text-xs text-white font-mono max-w-[150px] truncate">{{ settings.coordinatorModel.split('/')[1] || settings.coordinatorModel }}</div>
+                        </div>
+                    </div>
+
+                <!-- Active Agents Grid -->
+                <div class="flex flex-wrap justify-center gap-8 max-w-4xl z-10">
+                    <transition-group name="list">
+                        <div v-for="agent in activeAgents" :key="agent.id" class="flex flex-col items-center gap-3 group">
+                            <!-- Connection Line (CSS Hack for simplicity) -->
+                            <div class="h-8 w-px bg-gradient-to-b from-blue-500/50 to-transparent -mt-8 mb-0 absolute" style="z-index:-1"></div>
+                            
+                            <div class="w-16 h-16 rounded-xl bg-gray-800 border border-gray-700 p-3 shadow-xl relative transition-all duration-300 group-hover:-translate-y-1" 
+                                 :class="{
+                                     'border-blue-500 shadow-blue-500/30': agent.status === 'working',
+                                     'border-green-500 shadow-green-500/30': agent.status === 'done',
+                                     'border-gray-600': agent.status === 'idle'
+                                 }">
+                                <img :src="getAgentIcon(agent.model)" class="w-full h-full object-contain opacity-90">
+                                
+                                <!-- Status Dot -->
+                                <div class="absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-gray-900"
+                                     :class="{
+                                         'bg-blue-500 animate-ping': agent.status === 'working',
+                                         'bg-green-500': agent.status === 'done',
+                                         'bg-gray-500': agent.status === 'idle'
+                                     }">
+                                </div>
+                            </div>
+                            
+                            <div class="text-center">
+                                <div class="text-[10px] font-bold text-gray-300 mono bg-black/50 px-2 py-1 rounded">{{ agent.model.split('/')[1] || agent.model }}</div>
+                                <div class="text-[9px] text-gray-500 mt-0.5">{{ agent.status.toUpperCase() }}</div>
+                            </div>
+                        </div>
+                    </transition-group>
+                </div>
+
+                <!-- Empty State -->
+                <div v-if="activeAgents.length === 0 && !isProcessing" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="text-gray-600 text-sm mono opacity-50">WAITING FOR INPUT...</div>
+                </div>
+
+            </div>
+
+            <!-- Chat Interface (Right/Bottom) -->
+            <div class="w-full lg:w-[500px] glass-panel border-l border-white/10 flex flex-col shadow-2xl z-20">
+                
+                <!-- Messages -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-6" ref="msgContainer">
+                    <div v-for="(msg, i) in messages" :key="i" :class="{'text-right': msg.role === 'user'}">
+                        <div class="inline-block max-w-[90%] p-4 rounded-2xl text-sm"
+                             :class="msg.role === 'user' ? 'bg-blue-600 text-white rounded-tr-sm' : 'bg-gray-800 text-gray-200 border border-gray-700 rounded-tl-sm'">
+                            
+                            <!-- Markdown Content -->
+                            <div class="prose prose-invert max-w-none" v-html="renderMarkdown(msg.content)"></div>
+                            
+                            <!-- Agent Details (if assistant) -->
+                            <div v-if="msg.details" class="mt-3 pt-3 border-t border-gray-700/50">
+                                <div class="flex flex-wrap gap-2">
+                                    <span v-for="label in msg.details.labels" class="text-[10px] bg-gray-900 px-2 py-1 rounded text-gray-400 mono">{{ label }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Typing Indicator -->
+                    <div v-if="isProcessing" class="flex gap-2 p-4 bg-gray-800/50 rounded-2xl w-24 animate-pulse">
+                        <div class="w-2 h-2 bg-gray-500 rounded-full"></div>
+                        <div class="w-2 h-2 bg-gray-500 rounded-full"></div>
+                        <div class="w-2 h-2 bg-gray-500 rounded-full"></div>
+                    </div>
+                </div>
+
+                <!-- Input -->
+                <div class="p-4 bg-gray-900/80 border-t border-white/5">
+                    <div class="relative">
+                        <textarea 
+                            v-model="queryInput" 
+                            @keydown.enter.prevent="sendQuery"
+                            placeholder="Ask the swarm..." 
+                            class="w-full bg-gray-800 text-white rounded-xl pl-4 pr-12 py-3 text-sm border border-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none outline-none shadow-inner"
+                            rows="1"
+                            style="min-height: 48px;"
+                        ></textarea>
+                        <button 
+                            @click="sendQuery"
+                            :disabled="!isConnected || isProcessing || !queryInput.trim()"
+                            class="absolute right-2 bottom-2 p-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            <i class="ph ph-paper-plane-right"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, computed, nextTick } = Vue;
+
+        createApp({
+            setup() {
+                const socket = ref(null);
+                const isConnected = ref(false);
+                const isProcessing = ref(false);
+                const sidebarOpen = ref(true);
+                const modelsLoading = ref(false);
+                const modelsLastUpdated = ref("");
+                const queryInput = ref("");
+                const messages = ref([]);
+                const activeAgents = ref([]);
+                const msgContainer = ref(null);
+                const modelInput = ref(null);
+                const rawModels = ref([]);
+                
+                // Searchable Dropdown State
+                const modelSearch = ref("anthropic/claude-3.5-sonnet");
+                const showModelDropdown = ref(false);
+
+                // Settings
+                const settings = ref({
+                    coordinatorModel: "anthropic/claude-3.5-sonnet",
+                    option: "free",
+                    reasoningMode: "disabled"
+                });
+
+                // Computed
+                const coordinatorModels = computed(() => {
+                    if (rawModels.value.length > 0) return rawModels.value;
+                    return [
+                        { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet" },
+                        { id: "google/gemini-2.0-flash-exp:free", name: "Gemini 2.0 Flash" },
+                        { id: "openai/gpt-4o", name: "GPT-4o" }
+                    ];
+                });
+
+                const filteredCoordinatorModels = computed(() => {
+                    // If input is empty, show all
+                    if (!modelSearch.value) return coordinatorModels.value;
+                    
+                    const term = modelSearch.value.toLowerCase();
+                    const currentId = settings.value.coordinatorModel.toLowerCase();
+                    const currentName = (coordinatorModels.value.find(m => m.id === settings.value.coordinatorModel)?.name || '').toLowerCase();
+
+                    // If search term exactly matches the current selection (ID or Name), don't filter yet
+                    // This allows seeing the full list when first opening the dropdown
+                    if (term === currentId || term === currentName || term === settings.value.coordinatorModel.split('/')[1].toLowerCase()) {
+                        return coordinatorModels.value;
+                    }
+
+                    return coordinatorModels.value.filter(m => 
+                        (m.name && m.name.toLowerCase().includes(term)) || 
+                        m.id.toLowerCase().includes(term)
+                    );
+                });
+
+                const selectCoordinator = (model) => {
+                    settings.value.coordinatorModel = model.id;
+                    modelSearch.value = model.name || model.id.split('/')[1];
+                    showModelDropdown.value = false;
+                };
+
+                const clearModelSearch = () => {
+                    modelSearch.value = "";
+                    showModelDropdown.value = true;
+                    if (modelInput.value) {
+                        modelInput.value.focus();
+                    }
+                };
+
+                // WebSocket Connection Logic
+                const connectWebSocket = () => {
+                    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                    const wsUrl = `${protocol}//${window.location.host}/ws`;
+                    
+                    socket.value = new WebSocket(wsUrl);
+
+                    socket.value.onopen = () => {
+                        isConnected.value = true;
+                    };
+
+                    socket.value.onclose = () => {
+                        isConnected.value = false;
+                        setTimeout(connectWebSocket, 3000); // Reconnect
+                    };
+
+                    socket.value.onmessage = (event) => {
+                        const msg = JSON.parse(event.data);
+                        handleSocketMessage(msg);
+                    };
+                };
+
+                const handleSocketMessage = (msg) => {
+                    switch(msg.type) {
+                        case 'agent_selected':
+                            addAgent(msg.data.model);
+                            break;
+                        
+                        case 'agent_start':
+                            updateAgentStatus(msg.data.model, 'working');
+                            break;
+                        
+                        case 'agent_finish':
+                            updateAgentStatus(msg.data.model, 'done');
+                            break;
+                        
+                        case 'result':
+                            isProcessing.value = false;
+                            // Force all agents to 'done' state to prevent stuck animations
+                            activeAgents.value.forEach(a => a.status = 'done');
+                            
+                            messages.value.push({
+                                role: 'assistant',
+                                content: msg.data.answer,
+                                details: { labels: msg.data.labels }
+                            });
+                            scrollToBottom();
+                            break;
+                            
+                        case 'error':
+                            isProcessing.value = false;
+                            activeAgents.value.forEach(a => a.status = 'error');
+                            messages.value.push({
+                                role: 'assistant',
+                                content: `❌ **System Error:** ${msg.data}`
+                            });
+                            break;
+                    }
+                };
+
+                const fetchModels = async (force = false) => {
+                    modelsLoading.value = true;
+                    try {
+                        const url = force ? '/api/models?force_refresh=true' : '/api/models';
+                        const res = await fetch(url);
+                        const data = await res.json();
+                        if (data.models && data.models.length > 0) {
+                            rawModels.value = data.models;
+                            modelsLastUpdated.value = data.last_updated;
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch models", e);
+                    } finally {
+                        modelsLoading.value = false;
+                    }
+                };
+
+                // Agent Management
+                const addAgent = (modelName) => {
+                    // Check if already exists
+                    if (!activeAgents.value.find(a => a.model === modelName)) {
+                        activeAgents.value.push({
+                            id: Date.now() + Math.random(),
+                            model: modelName,
+                            status: 'idle' // idle, working, done
+                        });
+                    }
+                };
+
+                const updateAgentStatus = (modelName, status) => {
+                    const agent = activeAgents.value.find(a => a.model === modelName);
+                    if (agent) {
+                        agent.status = status;
+                    } else {
+                        // If we missed the selection event, add it now
+                        activeAgents.value.push({
+                            id: Date.now(),
+                            model: modelName,
+                            status: status
+                        });
+                    }
+                };
+
+                const getAgentIcon = (model) => {
+                    if (model.includes('claude')) return '/static/icon-creative.png';
+                    if (model.includes('gpt') || model.includes('o1')) return '/static/icon-reasoning.png';
+                    if (model.includes('gemini')) return '/static/icon-code.png';
+                    if (model.includes('math')) return '/static/icon-math.png';
+                    return '/static/agent-icon.png';
+                };
+
+                const sendQuery = () => {
+                    if (!queryInput.value.trim()) return;
+                    
+                    const text = queryInput.value;
+                    queryInput.value = "";
+                    
+                    messages.value.push({ role: 'user', content: text });
+                    isProcessing.value = true;
+                    activeAgents.value = []; // Reset visualization for new query
+                    scrollToBottom();
+
+                    socket.value.send(JSON.stringify({
+                        type: 'query',
+                        payload: { 
+                            query: text,
+                            coordinator_model: settings.value.coordinatorModel,
+                            option: settings.value.option,
+                            reasoning_mode: settings.value.reasoningMode
+                        }
+                    }));
+                };
+
+                const scrollToBottom = async () => {
+                    await nextTick();
+                    if (msgContainer.value) {
+                        msgContainer.value.scrollTop = msgContainer.value.scrollHeight;
+                    }
+                };
+
+                const renderMarkdown = (text) => {
+                    return marked.parse(text || '');
+                };
+
+                onMounted(() => {
+                    connectWebSocket();
+                    fetchModels();
+                });
+
+                return {
+                    sidebarOpen,
+                    modelsLoading,
+                    modelsLastUpdated,
+                    fetchModels,
+                    settings,
+                    coordinatorModels,
+                    modelSearch,
+                    modelInput,
+                    clearModelSearch,
+                    showModelDropdown,
+                    filteredCoordinatorModels,
+                    selectCoordinator,
+                    isConnected,
+                    isProcessing,
+                    queryInput,
+                    messages,
+                    activeAgents,
+                    msgContainer,
+                    sendQuery,
+                    getAgentIcon,
+                    renderMarkdown
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

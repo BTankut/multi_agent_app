@@ -1,0 +1,199 @@
+import sys
+import os
+import json
+import asyncio
+import logging
+from pathlib import Path
+from typing import List, Dict, Any
+
+# Add parent directory to path
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import uvicorn
+
+# Import core logic
+from utils import get_openrouter_models, logger as app_logger
+from coordinator import process_query
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("modern_ui_v2")
+
+app = FastAPI(title="Multi-Agent AI Orchestrator")
+
+# Mount static files
+static_path = Path(__file__).parent.parent / "static"
+app.mount("/static", StaticFiles(directory=str(static_path)), name="static")
+
+# Store active connections
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_json(self, message: dict, websocket: WebSocket):
+        await websocket.send_json(message)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            await connection.send_json(message)
+
+manager = ConnectionManager()
+
+# Custom Log Handler to stream events to WebSocket
+class WebSocketLogHandler(logging.Handler):
+    def __init__(self, websocket: WebSocket):
+        super().__init__()
+        self.websocket = websocket
+        self.loop = asyncio.get_event_loop()
+
+    def emit(self, record):
+        try:
+            # Parse structured logs if possible, or verify log message content
+            msg = self.format(record)
+            
+            # Determine event type based on log content/level
+            event_type = "log"
+            payload = {"message": msg, "level": record.levelname}
+
+            # Smart parsing for visualization
+            if "Calling model:" in msg:
+                event_type = "agent_start"
+                payload["model"] = msg.split("Calling model:")[1].split("with")[0].strip()
+            elif "received response from:" in msg:
+                event_type = "agent_finish"
+                payload["model"] = msg.split("received response from:")[1].strip()
+            elif "Selected premium model:" in msg:
+                event_type = "agent_selected"
+                payload["model"] = msg.split("Selected premium model:")[1].split("(")[0].strip()
+            elif "Synthesizing final answer" in msg:
+                event_type = "coordinator_thinking"
+            
+            # Send via WebSocket (fire and forget task)
+            asyncio.run_coroutine_threadsafe(
+                self.websocket.send_json({
+                    "type": event_type,
+                    "data": payload,
+                    "timestamp": record.created
+                }),
+                self.loop
+            )
+        except Exception:
+            self.handleError(record)
+
+@app.get("/")
+async def get():
+    return FileResponse(str(static_path / "index.html"))
+
+@app.get("/api/models")
+async def get_models(force_refresh: bool = False):
+    """Fetch available models with caching."""
+    cache_file = Path("data/models_cache.json")
+    
+    # Try to serve from cache first
+    if not force_refresh and cache_file.exists():
+        try:
+            with open(cache_file, 'r') as f:
+                cached_data = json.load(f)
+                return cached_data
+        except Exception as e:
+            logger.error(f"Error reading model cache: {e}")
+    
+    # Fetch fresh data
+    try:
+        models = get_openrouter_models()
+        
+        # Create cache data with timestamp
+        import datetime
+        cache_data = {
+            "models": models,
+            "last_updated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        # Ensure directory exists
+        os.makedirs("data", exist_ok=True)
+        
+        # Save to cache
+        with open(cache_file, 'w') as f:
+            json.dump(cache_data, f)
+            
+        return cache_data
+    except Exception as e:
+        logger.error(f"Error fetching models: {e}")
+        return {"models": [], "last_updated": "Unknown"}
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    
+    # Attach custom log handler for this session
+    ws_handler = WebSocketLogHandler(websocket)
+    formatter = logging.Formatter('%(message)s')
+    ws_handler.setFormatter(formatter)
+    
+    # Add handler to both main app logger and the coordinator/utils loggers
+    app_logger.addHandler(ws_handler)
+    logging.getLogger("coordinator").addHandler(ws_handler)
+    logging.getLogger("agents").addHandler(ws_handler)
+    
+    try:
+        while True:
+            data = await websocket.receive_text()
+            request = json.loads(data)
+            
+            if request.get("type") == "query":
+                query = request.get("payload", {}).get("query")
+                coordinator_model = request.get("payload", {}).get("coordinator_model", "anthropic/claude-3.5-sonnet")
+                
+                await manager.send_json({"type": "status", "data": "started"}, websocket)
+                
+                # Run blocking process_query in a separate thread to not block WebSocket loop
+                # and allow logs to stream
+                loop = asyncio.get_event_loop()
+                
+                # Wrapper to run sync function
+                def run_process():
+                    return process_query(
+                        query=query,
+                        coordinator_model=coordinator_model,
+                        option="free", # or get from request
+                        openrouter_models=get_openrouter_models()
+                    )
+                
+                try:
+                    # Execute logic
+                    final_answer, labels, histories = await loop.run_in_executor(None, run_process)
+                    
+                    # Send final result
+                    await manager.send_json({
+                        "type": "result",
+                        "data": {
+                            "answer": final_answer,
+                            "labels": labels,
+                            "history": histories
+                        }
+                    }, websocket)
+                    
+                except Exception as e:
+                    await manager.send_json({
+                        "type": "error",
+                        "data": str(e)
+                    }, websocket)
+                    
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        app_logger.removeHandler(ws_handler)
+        logging.getLogger("coordinator").removeHandler(ws_handler)
+        logging.getLogger("agents").removeHandler(ws_handler)
+
+if __name__ == "__main__":
+    uvicorn.run("modern_ui_v2.backend.main:app", host="127.0.0.1", port=8000, reload=True)
