@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Agent AI System</title>
+    <link rel="icon" type="image/png" href="static/app-logo.png">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            750: '#2d3342',
+                            850: '#1a202c',
+                            950: '#0d1117',
+                        },
+                        primary: {
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Vue 3 -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    
+    <!-- Marked (Markdown) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- Highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f1117;
+            color: #e2e8f0;
+            background-image: url('static/bg-pattern.png');
+            background-repeat: repeat;
+            background-size: 256px; 
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a202c; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4a5568; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #718096; 
+        }
+
+        /* Markdown Styles */
+        .prose {
+            max-width: none;
+            color: #e2e8f0;
+        }
+        .prose h1, .prose h2, .prose h3 {
+            color: #f8fafc;
+            font-weight: 600;
+            margin-top: 1.5em;
+            margin-bottom: 0.5em;
+        }
+        .prose p {
+            margin-bottom: 1em;
+            line-height: 1.6;
+        }
+        .prose code {
+            background-color: #2d3748;
+            padding: 0.2em 0.4em;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        .prose pre {
+            background-color: #1a202c;
+            padding: 1em;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin-bottom: 1em;
+        }
+        .prose pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        .prose ul {
+            list-style-type: disc;
+            padding-left: 1.5em;
+            margin-bottom: 1em;
+        }
+        .prose ol {
+            list-style-type: decimal;
+            padding-left: 1.5em;
+            margin-bottom: 1em;
+        }
+        .prose blockquote {
+            border-left: 4px solid #4a5568;
+            padding-left: 1em;
+            color: #a0aec0;
+            font-style: italic;
+        }
+        .prose table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1em;
+        }
+        .prose th, .prose td {
+            border: 1px solid #4a5568;
+            padding: 0.5em;
+            text-align: left;
+        }
+        .prose th {
+            background-color: #2d3748;
+        }
+
+        /* Animations */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); opacity: 0.5; }
+            100% { transform: scale(1.3); opacity: 0; }
+        }
+        .animate-pulse-ring::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            border-radius: 50%;
+            background-color: rgba(59, 130, 246, 0.5);
+            animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+            z-index: -1;
+        }
+
+        /* Glassmorphism */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex">
+    <div id="app" class="w-full h-full flex">
+        
+        <!-- Sidebar -->
+        <aside :class="['glass-panel z-20 flex flex-col transition-all duration-300 ease-in-out border-r border-gray-700', sidebarOpen ? 'w-80' : 'w-0 overflow-hidden']">
+            <!-- Header -->
+            <div class="p-4 border-b border-gray-700 flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg flex items-center justify-center overflow-hidden shadow-lg bg-black/20">
+                    <img src="static/app-logo.png" alt="Logo" class="w-full h-full object-cover">
+                </div>
+                <div>
+                    <h1 class="font-bold text-white leading-tight">Multi-Agent</h1>
+                    <p class="text-xs text-gray-400">Orchestrator System</p>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-6">
+                
+                <!-- Coordinator Model -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Coordinator Model</label>
+                    <div class="relative">
+                        <select v-model="settings.coordinatorModel" class="w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 appearance-none">
+                            <option v-for="model in coordinatorModels" :key="model.id" :value="model.id">
+                                {{ model.name || model.id.split('/')[1] }}
+                            </option>
+                        </select>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
+                            <i class="ph ph-caret-down"></i>
+                        </div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Directs other agents and synthesizes answers.</p>
+                </div>
+
+                <!-- Strategy -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Selection Strategy</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button 
+                            v-for="opt in ['free', 'paid', 'optimized']" 
+                            :key="opt"
+                            @click="settings.option = opt"
+                            :class="['px-3 py-2 text-xs font-medium rounded-md capitalize transition-colors', settings.option === opt ? 'bg-blue-600 text-white' : 'bg-gray-800 text-gray-400 hover:bg-gray-700']"
+                        >
+                            {{ opt }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Reasoning Mode -->
+                <div>
+                    <label class="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Reasoning Mode</label>
+                    <div class="space-y-2">
+                        <div v-for="mode in reasoningOptions" :key="mode.value" class="flex items-center">
+                            <input type="radio" :id="mode.value" :value="mode.value" v-model="settings.reasoningMode" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 focus:ring-blue-600 ring-offset-gray-800 focus:ring-2">
+                            <label :for="mode.value" class="ml-2 text-sm font-medium text-gray-300">{{ mode.label }}</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div v-if="modelsLoading" class="flex items-center gap-2 text-sm text-blue-400">
+                    <i class="ph ph-spinner animate-spin"></i> Loading models...
+                </div>
+                <div v-else class="flex items-center gap-2 text-sm text-green-400">
+                    <i class="ph ph-check-circle"></i> {{ totalModels }} models available
+                </div>
+
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-gray-700">
+                <button @click="clearHistory" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-800 hover:bg-red-900/30 text-gray-300 hover:text-red-400 rounded-lg transition-colors text-sm">
+                    <i class="ph ph-trash"></i> Clear History
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col relative bg-gradient-to-b from-gray-900 to-black">
+            
+            <!-- Toggle Sidebar Button (Mobile/Desktop) -->
+            <button @click="sidebarOpen = !sidebarOpen" class="absolute top-4 left-4 z-10 p-2 rounded-lg bg-gray-800/50 hover:bg-gray-700 text-gray-300 transition-colors backdrop-blur-sm">
+                <i :class="['ph text-xl', sidebarOpen ? 'ph-caret-left' : 'ph-list']"></i>
+            </button>
+
+            <!-- Chat Area -->
+            <div class="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth" ref="chatContainer">
+                <div class="max-w-4xl mx-auto space-y-6 pb-20">
+                    
+                    <!-- Welcome Message -->
+                    <div v-if="history.length === 0" class="text-center py-20 space-y-4">
+                        <div class="w-24 h-24 mx-auto rounded-2xl flex items-center justify-center shadow-2xl animate-pulse-ring relative overflow-hidden bg-black/20 border border-white/10">
+                            <img src="static/app-logo.png" alt="AI" class="w-full h-full object-cover">
+                        </div>
+                        <h2 class="text-3xl font-bold text-white">How can I help you?</h2>
+                        <p class="text-gray-400 max-w-md mx-auto">I orchestrate multiple AI agents to solve complex problems. Ask me anything!</p>
+                    </div>
+
+                    <!-- Conversation History -->
+                    <template v-for="(msg, index) in displayHistory" :key="index">
+                        
+                        <!-- User Message -->
+                        <div v-if="msg.role === 'user'" class="flex justify-end">
+                            <div class="bg-blue-600 text-white px-5 py-3 rounded-2xl rounded-tr-sm max-w-[80%] shadow-lg">
+                                <p class="whitespace-pre-wrap">{{ msg.content }}</p>
+                            </div>
+                        </div>
+
+                        <!-- Assistant Message -->
+                        <div v-else class="flex justify-start w-full">
+                            <div class="flex gap-4 max-w-4xl w-full">
+                                <div class="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center border border-gray-600 overflow-hidden bg-gray-800">
+                                    <img src="static/coordinator-icon.png" alt="Bot" class="w-full h-full object-cover">
+                                </div>
+                                <div class="flex-1 space-y-2">
+                                    <!-- Metadata Badge -->
+                                    <div v-if="msg.metadata" class="flex flex-wrap gap-2 mb-2">
+                                        <span v-for="label in msg.metadata.labels" :key="label" class="px-2 py-0.5 rounded-full bg-gray-800 border border-gray-700 text-xs text-gray-400">
+                                            {{ label }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Main Content -->
+                                    <div class="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm p-5 shadow-lg prose prose-invert max-w-none" v-html="renderMarkdown(msg.content)"></div>
+                                    
+                                    <!-- Agent Details (Collapsible) -->
+                                    <div v-if="msg.agentHistory" class="mt-2">
+                                        <details class="group">
+                                            <summary class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer hover:text-blue-400 transition-colors select-none">
+                                                <i class="ph ph-caret-right group-open:rotate-90 transition-transform"></i>
+                                                View Agent Responses ({{ Object.keys(msg.agentHistory).length }})
+                                            </summary>
+                                            <div class="mt-2 space-y-3 pl-4 border-l-2 border-gray-800">
+                                                <div v-for="(responses, agentName) in msg.agentHistory" :key="agentName" class="bg-gray-800/50 rounded-lg p-3">
+                                                    <div class="flex items-center gap-2 mb-2">
+                                                        <div class="w-5 h-5 rounded-full overflow-hidden bg-gray-700 border border-gray-600 flex-shrink-0">
+                                                            <img src="static/agent-icon.png" class="w-full h-full object-cover opacity-80">
+                                                        </div>
+                                                        <span class="text-xs font-bold text-blue-300">{{ agentName }}</span>
+                                                    </div>
+                                                    <!-- Show last response from agent -->
+                                                    <div class="text-sm text-gray-300 prose prose-invert prose-sm max-w-none" v-html="renderMarkdown(getLastResponse(responses))"></div>
+                                                </div>
+                                            </div>
+                                        </details>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+
+                    <!-- Loading State -->
+                    <div v-if="processing" class="flex justify-start w-full">
+                        <div class="flex gap-4 max-w-4xl w-full">
+                            <div class="w-10 h-10 rounded-full bg-gray-700 flex-shrink-0 flex items-center justify-center border border-gray-600 animate-pulse">
+                                <i class="ph ph-gear text-gray-400 animate-spin"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="bg-gray-800 border border-gray-700 rounded-2xl rounded-tl-sm p-4 shadow-lg inline-block">
+                                    <div class="flex gap-2">
+                                        <div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0s"></div>
+                                        <div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                                        <div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+                                    </div>
+                                    <p class="text-xs text-gray-500 mt-2">Orchestrating agents...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Error Toast -->
+                    <div v-if="error" class="fixed bottom-24 left-1/2 transform -translate-x-1/2 bg-red-900/90 text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 border border-red-700 z-50">
+                        <i class="ph ph-warning-circle text-xl"></i>
+                        <span>{{ error }}</span>
+                        <button @click="error = null" class="text-red-200 hover:text-white"><i class="ph ph-x"></i></button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="p-4 glass-panel border-t border-gray-700">
+                <div class="max-w-4xl mx-auto relative">
+                    <textarea 
+                        v-model="currentQuery" 
+                        @keydown.enter.prevent="submitQuery"
+                        :disabled="processing"
+                        placeholder="Ask anything..." 
+                        rows="1"
+                        class="w-full bg-gray-800 text-white rounded-xl pl-4 pr-12 py-4 border border-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none shadow-inner overflow-hidden transition-all focus:shadow-blue-500/10"
+                        style="min-height: 60px;"
+                        ref="queryInput"
+                    ></textarea>
+                    <button 
+                        @click="submitQuery" 
+                        :disabled="!currentQuery.trim() || processing"
+                        class="absolute right-2 bottom-2.5 p-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg transition-all shadow-lg"
+                    >
+                        <i class="ph ph-paper-plane-right text-lg"></i>
+                    </button>
+                </div>
+                <div class="text-center mt-2">
+                    <p class="text-[10px] text-gray-600 uppercase tracking-widest">Powered by OpenRouter & Gemini</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted, computed, nextTick, watch } = Vue;
+
+        createApp({
+            setup() {
+                const sidebarOpen = ref(true);
+                const processing = ref(false);
+                const currentQuery = ref("");
+                const error = ref(null);
+                const chatContainer = ref(null);
+                const queryInput = ref(null);
+                const modelsLoading = ref(true);
+                const rawModels = ref([]);
+                
+                // Settings
+                const settings = ref({
+                    coordinatorModel: "anthropic/claude-3.5-sonnet",
+                    option: "free",
+                    reasoningMode: "disabled"
+                });
+
+                // Chat state
+                const history = ref([]); // User/Assistant pairs for display
+                const backendHistory = ref({
+                    coordinator: [],
+                    agents: {}
+                });
+
+                const reasoningOptions = [
+                    { label: "Disabled", value: "disabled" },
+                    { label: "Coordinator Only", value: "coordinator_only" },
+                    { label: "All Models", value: "all" }
+                ];
+
+                // Base coordinator models list (fallback)
+                const baseCoordinatorModels = [
+                    { id: "anthropic/claude-3.5-sonnet" },
+                    { id: "google/gemini-pro" },
+                    { id: "openai/gpt-4o" },
+                    { id: "mistralai/mistral-large" }
+                ];
+
+                const coordinatorModels = computed(() => {
+                    if (rawModels.value.length > 0) {
+                        return rawModels.value;
+                    }
+                    return baseCoordinatorModels;
+                });
+
+                const totalModels = computed(() => rawModels.value.length);
+
+                // Markdown rendering
+                const renderMarkdown = (text) => {
+                    if (!text) return '';
+                    return marked.parse(text);
+                };
+
+                const getLastResponse = (conversation) => {
+                    if (!conversation || conversation.length === 0) return "No response";
+                    // Find last assistant message
+                    for (let i = conversation.length - 1; i >= 0; i--) {
+                        if (conversation[i].role === 'assistant') {
+                            return conversation[i].content;
+                        }
+                    }
+                    return "No response";
+                };
+
+                const scrollToBottom = async () => {
+                    await nextTick();
+                    if (chatContainer.value) {
+                        chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+                    }
+                };
+
+                // Auto-resize textarea
+                watch(currentQuery, async () => {
+                    await nextTick();
+                    if (queryInput.value) {
+                        queryInput.value.style.height = 'auto';
+                        queryInput.value.style.height = Math.min(queryInput.value.scrollHeight, 200) + 'px';
+                    }
+                });
+
+                const fetchModels = async () => {
+                    modelsLoading.value = true;
+                    try {
+                        const res = await fetch('/api/models');
+                        const data = await res.json();
+                        if (data.models) {
+                            rawModels.value = data.models;
+                        }
+                    } catch (e) {
+                        console.error("Failed to fetch models", e);
+                        // Use base models as fallback
+                    } finally {
+                        modelsLoading.value = false;
+                    }
+                };
+
+                const submitQuery = async () => {
+                    if (!currentQuery.value.trim() || processing.value) return;
+
+                    const query = currentQuery.value;
+                    currentQuery.value = "";
+                    // Reset height
+                    if (queryInput.value) queryInput.value.style.height = '60px';
+
+                    // Optimistic UI update
+                    history.value.push({ role: 'user', content: query });
+                    scrollToBottom();
+
+                    processing.value = true;
+                    error.value = null;
+
+                    try {
+                        const res = await fetch('/api/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                query: query,
+                                coordinator_model: settings.value.coordinatorModel,
+                                option: settings.value.option,
+                                reasoning_mode: settings.value.reasoningMode,
+                                coordinator_history: backendHistory.value.coordinator,
+                                agent_history: backendHistory.value.agents
+                            })
+                        });
+
+                        const data = await res.json();
+
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+
+                        // Update backend history state
+                        backendHistory.value.coordinator = data.coordinator_history;
+                        backendHistory.value.agents = data.agent_history;
+
+                        // Find the unique agent responses for this turn
+                        // We look at the diff in agent history keys or content, 
+                        // but strictly speaking, the backend returns the FULL new state.
+                        // For the display bubble, we attach the current state of agents.
+                        // A better way: The backend returns "agent_history" which is ALL history.
+                        // We want to show the responses relevant to THIS query. 
+                        // Simpler approach: Show all agents that have history.
+                        
+                        history.value.push({
+                            role: 'assistant',
+                            content: data.answer,
+                            metadata: {
+                                labels: data.labels
+                            },
+                            agentHistory: data.agent_history // Passing full history for inspection
+                        });
+
+                    } catch (e) {
+                        error.value = e.message || "An unexpected error occurred.";
+                        // Remove the user message if failed? No, keep it but show error.
+                    } finally {
+                        processing.value = false;
+                        scrollToBottom();
+                    }
+                };
+
+                const clearHistory = () => {
+                    history.value = [];
+                    backendHistory.value = { coordinator: [], agents: {} };
+                };
+
+                // Display history maps the flat array of user/assistant messages
+                const displayHistory = computed(() => history.value);
+
+                onMounted(() => {
+                    fetchModels();
+                    // Initialize highlight.js
+                    marked.setOptions({
+                        highlight: function(code, lang) {
+                            const language = highlight.getLanguage(lang) ? lang : 'plaintext';
+                            return highlight.highlight(code, { language }).value;
+                        },
+                        langPrefix: 'hljs language-'
+                    });
+                });
+
+                return {
+                    sidebarOpen,
+                    processing,
+                    currentQuery,
+                    error,
+                    settings,
+                    history,
+                    displayHistory,
+                    coordinatorModels,
+                    reasoningOptions,
+                    modelsLoading,
+                    totalModels,
+                    chatContainer,
+                    queryInput,
+                    submitQuery,
+                    clearHistory,
+                    renderMarkdown,
+                    getLastResponse
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

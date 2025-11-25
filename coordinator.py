@@ -174,6 +174,43 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
     
     return fallback_labels
 
+def get_safe_session_state():
+    """
+    Returns a safe session state object (dict-like) regardless of whether
+    Streamlit is running or not.
+    """
+    try:
+        import streamlit as st
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+        if get_script_run_ctx():
+            return st.session_state
+    except (ImportError, ModuleNotFoundError):
+        pass
+    except Exception:
+        # Catch other streamlit related errors (like missing context)
+        pass
+        
+    # Return a dummy dict-like object that ignores assignments but allows retrieval
+    # This prevents errors when running in headless mode
+    class DummyState(dict):
+        def __init__(self):
+            self._data = {}
+        def __getattr__(self, key):
+            return self._data.get(key)
+        def __setattr__(self, key, value):
+            if key == "_data":
+                super().__setattr__(key, value)
+            else:
+                self._data[key] = value
+        def __getitem__(self, key):
+            return self._data.get(key)
+        def __setitem__(self, key, value):
+            self._data[key] = value
+        def get(self, key, default=None):
+            return self._data.get(key, default)
+            
+    return DummyState()
+
 def coordinate_agents(query, coordinator_model, labels, openrouter_models, option, agent_history=None, reasoning_mode=None):
     """
     Coordinates the selected agents, calls them with appropriate roles,
@@ -196,25 +233,34 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
     if agent_history:
         updated_agent_history = agent_history.copy()
     
+    # Get safe session state
+    state = get_safe_session_state()
+    
     # Clear previous state if using Streamlit (but preserve conversation history)
-    import streamlit as st
-    if 'selected_agents' in st.session_state:
-        st.session_state.selected_agents = []
-        st.session_state.agent_responses = {}
-        st.session_state.coordinator_messages = ""
-        st.session_state.process_log = []
+    # Check if we are effectively in a streamlit context by checking if state has keys
+    if hasattr(state, 'selected_agents'):
+        state.selected_agents = []
+        state.agent_responses = {}
+        state.coordinator_messages = ""
+        state.process_log = []
+    else:
+        # Initialize if they don't exist (for DummyState)
+        state.selected_agents = []
+        state.agent_responses = {}
+        state.coordinator_messages = ""
+        state.process_log = []
     
     # Add to process log for debugging
-    if 'process_log' in st.session_state:
-        st.session_state.process_log.append(f"Query received: {query}")
-        st.session_state.process_log.append(f"Detected labels: {', '.join(labels)}")
-        st.session_state.process_log.append(f"Using coordinator model: {coordinator_model}")
+    if hasattr(state, 'process_log') and state.process_log is not None:
+        state.process_log.append(f"Query received: {query}")
+        state.process_log.append(f"Detected labels: {', '.join(labels)}")
+        state.process_log.append(f"Using coordinator model: {coordinator_model}")
     
     # Determine dynamic model count based on query complexity
     min_models, max_models = determine_complexity(query, labels)
     
-    if 'process_log' in st.session_state:
-        st.session_state.process_log.append(f"Complexity determined: min_models={min_models}, max_models={max_models}")
+    if hasattr(state, 'process_log') and state.process_log is not None:
+        state.process_log.append(f"Complexity determined: min_models={min_models}, max_models={max_models}")
     
     # Select models with updated constraints
     selected_models = get_models_by_labels(labels, option, openrouter_models, 
@@ -222,38 +268,38 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
     
     # IMPORTANT: Ensure the coordinator model isn't selected as an agent
     if coordinator_model in selected_models:
-        if 'process_log' in st.session_state:
-            st.session_state.process_log.append(f"Removing coordinator model {coordinator_model} from agent selection to avoid conflicts")
+        if hasattr(state, 'process_log') and state.process_log is not None:
+            state.process_log.append(f"Removing coordinator model {coordinator_model} from agent selection to avoid conflicts")
         selected_models.remove(coordinator_model)
         
     # Log provider diversity information
-    if 'process_log' in st.session_state:
+    if hasattr(state, 'process_log') and state.process_log is not None:
         providers = {}
         for model in selected_models:
             provider = model.split('/')[0] if '/' in model else "unknown"
             providers[provider] = providers.get(provider, 0) + 1
         
-        st.session_state.process_log.append(f"Provider diversity: {len(providers)} different providers")
+        state.process_log.append(f"Provider diversity: {len(providers)} different providers")
         for provider, count in providers.items():
-            st.session_state.process_log.append(f"  • {provider}: {count} models")
+            state.process_log.append(f"  • {provider}: {count} models")
     
     # Store selected models in session state for UI display
-    if 'selected_agents' in st.session_state:
+    if hasattr(state, 'selected_agents'):
         # Convert to set and back to list to remove duplicates
-        st.session_state.selected_agents = list(set(selected_models))
+        state.selected_agents = list(set(selected_models))
         
         # Create a more detailed log of model selection (with unique models)
-        if selected_models:
+        if selected_models and hasattr(state, 'process_log') and state.process_log is not None:
             # Get unique models
             unique_models = list(set(selected_models))
-            st.session_state.process_log.append(f"Selected models: {len(unique_models)} unique models based on labels {', '.join(labels)}")
+            state.process_log.append(f"Selected models: {len(unique_models)} unique models based on labels {', '.join(labels)}")
             for model in unique_models:
                 model_labels = get_labels_for_model(model)
                 matching_labels = [label for label in model_labels if label in labels]
                 if matching_labels:
-                    st.session_state.process_log.append(f"  • {model} selected for expertise in: {', '.join(matching_labels)}")
+                    state.process_log.append(f"  • {model} selected for expertise in: {', '.join(matching_labels)}")
                 else:
-                    st.session_state.process_log.append(f"  • {model} selected as general model")
+                    state.process_log.append(f"  • {model} selected as general model")
     
     if not selected_models:
         logger.error("No suitable models found for the query")
@@ -266,8 +312,8 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
     agent_responses = {}
     
     # Log the assigned roles in a more readable format
-    if 'process_log' in st.session_state:
-        st.session_state.process_log.append(f"Assigning specialized roles to each model")
+    if hasattr(state, 'process_log') and state.process_log is not None:
+        state.process_log.append(f"Assigning specialized roles to each model")
         for model, role in model_roles.items():
             # Get a concise summary of the role for display
             if "general-purpose assistant" in role:
@@ -286,7 +332,7 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                 # Extract first sentence for other roles
                 role_type = role.split('.')[0] if '.' in role else role[:50] + "..."
             
-            st.session_state.process_log.append(f"  • Assigned role to {model}: {role_type}")
+            state.process_log.append(f"  • Assigned role to {model}: {role_type}")
     
     # Storage for token usage, cost, and timing data
     usage_data = {
@@ -297,19 +343,19 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
     }
     
     # Log that we're calling models in parallel
-    if 'process_log' in st.session_state:
-        st.session_state.process_log.append(f"📡 Calling {len(selected_models)} agents in parallel")
+    if hasattr(state, 'process_log') and state.process_log is not None:
+        state.process_log.append(f"📡 Calling {len(selected_models)} agents in parallel")
         
     # Prepare agent histories for parallel calls
     agent_histories = {}
     for model_name in selected_models:
-        if 'process_log' in st.session_state:
-            st.session_state.process_log.append(f"Preparing call to agent: {model_name}")
+        if hasattr(state, 'process_log') and state.process_log is not None:
+            state.process_log.append(f"Preparing call to agent: {model_name}")
             
         if agent_history and model_name in agent_history:
             agent_histories[model_name] = agent_history[model_name]
-            if 'process_log' in st.session_state:
-                st.session_state.process_log.append(f"  • Using conversation history with {len(agent_history[model_name])} messages")
+            if hasattr(state, 'process_log') and state.process_log is not None:
+                state.process_log.append(f"  • Using conversation history with {len(agent_history[model_name])} messages")
     
     # Make parallel API calls to all models
     try:
@@ -327,10 +373,10 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                     agent_responses[model_name] = response
                     
                     # Store in session state for UI display
-                    if 'agent_responses' in st.session_state:
-                        st.session_state.agent_responses[model_name] = response
-                        if model_name not in st.session_state.selected_agents:
-                            st.session_state.selected_agents.append(model_name)
+                    if hasattr(state, 'agent_responses'):
+                        state.agent_responses[model_name] = response
+                        if model_name not in state.selected_agents:
+                            state.selected_agents.append(model_name)
                     
                     # Update agent conversation history
                     agent_conversation = agent_histories.get(model_name, [])
@@ -351,23 +397,23 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                     usage_data["total_time"] += max(metadata["time"], usage_data["total_time"])  # Use max time instead of sum
                     
                     # Log usage data
-                    if 'process_log' in st.session_state:
+                    if hasattr(state, 'process_log') and state.process_log is not None:
                         token_info = metadata["tokens"]
-                        st.session_state.process_log.append(
+                        state.process_log.append(
                             f"  • {model_name} usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
                         if metadata["cost"] > 0:
                             # Türkçe formatta virgül kullanarak göster
                             # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
                             cost_str = f"{metadata['cost']:.6f}".rstrip('0').rstrip('.').replace(".", ",")
-                            st.session_state.process_log.append(f"  • Estimated cost: ${cost_str}/1M tokens")
+                            state.process_log.append(f"  • Estimated cost: ${cost_str}/1M tokens")
                         # Notify user if reasoning was disabled for this model
                         if metadata.get("reasoning_fallback"):
-                            st.session_state.process_log.append(f"  ⚠️ {model_name} does not support reasoning mode, continued without it")
+                            state.process_log.append(f"  ⚠️ {model_name} does not support reasoning mode, continued without it")
                 else:
                     # Old format fallback
                     agent_responses[model_name] = response_tuple
-                    if 'agent_responses' in st.session_state:
-                        st.session_state.agent_responses[model_name] = response_tuple
+                    if hasattr(state, 'agent_responses'):
+                        state.agent_responses[model_name] = response_tuple
             
             except ValueError as e:
                 error_str = str(e)
@@ -380,8 +426,8 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                     # Try to use a known-good alternative from the same provider
                     alt_model_name = "sao10k/l3-lunaris-8b"  # Our reliable fallback model
                     
-                    if 'process_log' in st.session_state:
-                        st.session_state.process_log.append(f"⚠️ Provider issue with {model_name}, trying {alt_model_name} instead")
+                    if hasattr(state, 'process_log') and state.process_log is not None:
+                        state.process_log.append(f"⚠️ Provider issue with {model_name}, trying {alt_model_name} instead")
                     
                     try:
                         # Import call_agent here to fix potential reference error
@@ -398,10 +444,10 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                             agent_responses[fallback_name] = alt_response
                             
                             # Store in session state for UI display
-                            if 'agent_responses' in st.session_state:
-                                st.session_state.agent_responses[fallback_name] = alt_response
-                                if alt_model_name not in st.session_state.selected_agents:
-                                    st.session_state.selected_agents.append(alt_model_name)
+                            if hasattr(state, 'agent_responses'):
+                                state.agent_responses[fallback_name] = alt_response
+                                if alt_model_name not in state.selected_agents:
+                                    state.selected_agents.append(alt_model_name)
                             
                             # Update agent conversation history for the fallback model
                             alt_conversation = []
@@ -424,37 +470,37 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                             # Old format fallback
                             fallback_name = f"{alt_model_name} (fallback)"
                             agent_responses[fallback_name] = alt_response_tuple
-                            if 'agent_responses' in st.session_state:
-                                st.session_state.agent_responses[fallback_name] = alt_response_tuple
+                            if hasattr(state, 'agent_responses'):
+                                state.agent_responses[fallback_name] = alt_response_tuple
                             
                     except Exception as alt_e:
                         logger.error(f"Alternative model also failed: {alt_model_name} - {str(alt_e)}")
-                        if 'process_log' in st.session_state:
-                            st.session_state.process_log.append(f"❌ Fallback model {alt_model_name} also failed")
+                        if hasattr(state, 'process_log') and state.process_log is not None:
+                            state.process_log.append(f"❌ Fallback model {alt_model_name} also failed")
                 else:
                     # Log other errors
-                    if 'process_log' in st.session_state:
-                        st.session_state.process_log.append(f"❌ Error with {model_name}: {error_str}")
+                    if hasattr(state, 'process_log') and state.process_log is not None:
+                        state.process_log.append(f"❌ Error with {model_name}: {error_str}")
                         
             except Exception as e:
                 logger.error(f"Exception processing result for {model_name}: {str(e)}")
-                if 'process_log' in st.session_state:
-                    st.session_state.process_log.append(f"❌ Error with {model_name}: {str(e)}")
+                if hasattr(state, 'process_log') and state.process_log is not None:
+                    state.process_log.append(f"❌ Error with {model_name}: {str(e)}")
                     
     except Exception as e:
         logger.error(f"Error in parallel API calls: {str(e)}")
-        if 'process_log' in st.session_state:
-            st.session_state.process_log.append(f"❌ Error in parallel API calls: {str(e)}")
+        if hasattr(state, 'process_log') and state.process_log is not None:
+            state.process_log.append(f"❌ Error in parallel API calls: {str(e)}")
             
         # Fallback to sequential execution if parallel fails
-        if 'process_log' in st.session_state:
-            st.session_state.process_log.append("⚠️ Falling back to sequential API calls")
+        if hasattr(state, 'process_log') and state.process_log is not None:
+            state.process_log.append("⚠️ Falling back to sequential API calls")
             
         # Call each agent sequentially (original implementation)
         for model_name in selected_models:
             role = model_roles.get(model_name, "You are a general-purpose assistant.")
-            if 'process_log' in st.session_state:
-                st.session_state.process_log.append(f"Calling agent: {model_name}")
+            if hasattr(state, 'process_log') and state.process_log is not None:
+                state.process_log.append(f"Calling agent: {model_name}")
             
             agent_conversation = agent_histories.get(model_name, None)
             
@@ -468,10 +514,10 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                     response, metadata = response_tuple
                     agent_responses[model_name] = response
                     
-                    if 'agent_responses' in st.session_state:
-                        st.session_state.agent_responses[model_name] = response
-                        if model_name not in st.session_state.selected_agents:
-                            st.session_state.selected_agents.append(model_name)
+                    if hasattr(state, 'agent_responses'):
+                        state.agent_responses[model_name] = response
+                        if model_name not in state.selected_agents:
+                            state.selected_agents.append(model_name)
                     
                     if agent_conversation is None:
                         agent_conversation = []
@@ -487,27 +533,26 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                     usage_data["total_cost"] += metadata["cost"]
                     usage_data["total_time"] += metadata["time"]  # Sum for sequential
                     
-                    if 'process_log' in st.session_state:
+                    if hasattr(state, 'process_log') and state.process_log is not None:
                         token_info = metadata["tokens"]
-                        st.session_state.process_log.append(
+                        state.process_log.append(
                             f"  • {model_name} usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
                 else:
                     agent_responses[model_name] = response_tuple
-                    if 'agent_responses' in st.session_state:
-                        st.session_state.agent_responses[model_name] = response_tuple
+                    if hasattr(state, 'agent_responses'):
+                        state.agent_responses[model_name] = response_tuple
                 
             except Exception as model_e:
                 logger.error(f"Exception in sequential fallback for {model_name}: {str(model_e)}")
-                if 'process_log' in st.session_state:
-                    st.session_state.process_log.append(f"❌ Error with {model_name}: {str(model_e)}")
+                if hasattr(state, 'process_log') and state.process_log is not None:
+                    state.process_log.append(f"❌ Error with {model_name}: {str(model_e)}")
     
     # Store usage data in session state
-    if 'usage_data' not in st.session_state:
-        st.session_state.usage_data = {}
-    st.session_state.usage_data = usage_data
+    if hasattr(state, 'usage_data'):
+        state.usage_data = usage_data
     
     # Log total usage summary
-    if 'process_log' in st.session_state:
+    if hasattr(state, 'process_log') and state.process_log is not None:
         if usage_data['total_cost'] > 0:
             # Türkçe formatta virgül kullanarak göster
             # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
@@ -516,7 +561,7 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
         else:
             cost_info = "Free"
             
-        st.session_state.process_log.append(f"📊 Total usage: {usage_data['total_tokens']} tokens, {cost_info}, {usage_data['total_time']:.2f} seconds")
+        state.process_log.append(f"📊 Total usage: {usage_data['total_tokens']} tokens, {cost_info}, {usage_data['total_time']:.2f} seconds")
     
     # Special handling for code/math queries - check for conflicts
     # Also handle agent error scenarios by skipping conflict resolution if there are errors
@@ -539,15 +584,15 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                     similarity_score = calculate_similarity(responses[i], responses[j])
                     similarity_scores.append((models_list[i], models_list[j], similarity_score))
                     
-                    if 'process_log' in st.session_state:
-                        st.session_state.process_log.append(f"Similarity check between {models_list[i]} and {models_list[j]}: score={similarity_score:.2f}")
+                    if hasattr(state, 'process_log') and state.process_log is not None:
+                        state.process_log.append(f"Similarity check between {models_list[i]} and {models_list[j]}: score={similarity_score:.2f}")
                     
                     if similarity_score < 0.7:  # Threshold for significant difference
                         conflict_detected = True
             
             if conflict_detected:
-                if 'process_log' in st.session_state:
-                    st.session_state.process_log.append("🚨 Conflict detected between responses. Calling dedicated tiebreaker.")
+                if hasattr(state, 'process_log') and state.process_log is not None:
+                    state.process_log.append("🚨 Conflict detected between responses. Calling dedicated tiebreaker.")
                 
                 # Get a dedicated tiebreaker that isn't one of the models that already provided a response
                 all_reasoning_models = get_models_by_labels(["reasoning_expert"], option, openrouter_models)
@@ -562,8 +607,8 @@ def coordinate_agents(query, coordinator_model, labels, openrouter_models, optio
                 
                 if dedicated_tiebreakers:
                     tiebreaker_model = dedicated_tiebreakers[0]
-                    if 'process_log' in st.session_state:
-                        st.session_state.process_log.append(f"Selected dedicated tiebreaker: {tiebreaker_model}")
+                    if hasattr(state, 'process_log') and state.process_log is not None:
+                        state.process_log.append(f"Selected dedicated tiebreaker: {tiebreaker_model}")
                     
                     # Use a specialized tiebreaker role prompt that emphasizes methodical analysis
                     tiebreaker_role = """You are a precise analytical assistant with expertise in resolving conflicts between other AI models. 
@@ -642,8 +687,8 @@ I need you to analyze multiple conflicting answers from different AI models and 
 - Then "CONCLUSION:" with the final answer and brief justification
 - Always respond in the same language as the original query
 """
-                    if 'process_log' in st.session_state:
-                        st.session_state.process_log.append(f"Calling dedicated tiebreaker agent: {tiebreaker_model}")
+                    if hasattr(state, 'process_log') and state.process_log is not None:
+                        state.process_log.append(f"Calling dedicated tiebreaker agent: {tiebreaker_model}")
                     
                     # Ensure call_agent is properly imported here
                     from utils import call_agent
@@ -671,11 +716,11 @@ I need you to analyze multiple conflicting answers from different AI models and 
                         usage_data["total_time"] += tiebreaker_metadata["time"]
                         
                         # Log usage with enhanced information
-                        if 'process_log' in st.session_state:
+                        if hasattr(state, 'process_log') and state.process_log is not None:
                             token_info = tiebreaker_metadata["tokens"]
-                            st.session_state.process_log.append(
+                            state.process_log.append(
                                 f"  • Dedicated tiebreaker usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
-                            st.session_state.process_log.append(
+                            state.process_log.append(
                                 f"  • Tiebreaker analyzed {len(responses)} conflicting responses")
                     else:
                         # Backward compatibility
@@ -687,11 +732,11 @@ I need you to analyze multiple conflicting answers from different AI models and 
                         agent_responses[tiebreaker_key] = tiebreaker_response
                         
                         # Store in session state for UI display with enhanced visibility
-                        if 'agent_responses' in st.session_state:
-                            st.session_state.agent_responses[tiebreaker_key] = tiebreaker_response
+                        if hasattr(state, 'agent_responses'):
+                            state.agent_responses[tiebreaker_key] = tiebreaker_response
                             # Add with special flag to highlight in UI
-                            if tiebreaker_model not in st.session_state.selected_agents:
-                                st.session_state.selected_agents.append(tiebreaker_model)
+                            if tiebreaker_model not in state.selected_agents:
+                                state.selected_agents.append(tiebreaker_model)
                         
                         # Update agent conversation history for tiebreaker
                         tiebreaker_conversation = []
@@ -705,8 +750,8 @@ I need you to analyze multiple conflicting answers from different AI models and 
                         updated_agent_history[tiebreaker_key] = tiebreaker_conversation
                         
                         # Log the successful tiebreaker resolution
-                        if 'process_log' in st.session_state:
-                            st.session_state.process_log.append(f"✅ Dedicated tiebreaker provided analysis and resolution")
+                        if hasattr(state, 'process_log') and state.process_log is not None:
+                            state.process_log.append(f"✅ Dedicated tiebreaker provided analysis and resolution")
     
     # Generate final consolidated answer
     if agent_responses:
@@ -787,9 +832,10 @@ REASONING APPROACH:
 10. Always respond in the same language as the original user query"""
         
         # Store the coordinator messages for UI display
-        if 'coordinator_messages' in st.session_state:
-            st.session_state.coordinator_messages = combined_input
-            st.session_state.process_log.append(f"Synthesizing final answer with coordinator: {coordinator_model}")
+        if hasattr(state, 'coordinator_messages'):
+            state.coordinator_messages = combined_input
+            if hasattr(state, 'process_log') and state.process_log is not None:
+                state.process_log.append(f"Synthesizing final answer with coordinator: {coordinator_model}")
         
         try:
             # Call the coordinator for final synthesis
@@ -831,18 +877,18 @@ REASONING APPROACH:
                 usage_data["total_time"] += coordinator_metadata["time"]
                 
                 # Log the coordinator usage
-                if 'process_log' in st.session_state:
+                if hasattr(state, 'process_log') and state.process_log is not None:
                     token_info = coordinator_metadata["tokens"]
-                    st.session_state.process_log.append(
+                    state.process_log.append(
                         f"  • Coordinator usage: {token_info['prompt']} prompt + {token_info['completion']} completion = {token_info['total']} tokens")
                     if coordinator_metadata["cost"] > 0:
                         # Türkçe formatta virgül kullanarak göster
                         # En fazla 6 ondalık basamak gösterelim, gereksiz 0'lar olmasın
                         cost_str = f"{coordinator_metadata['cost']:.6f}".rstrip('0').rstrip('.').replace(".", ",")
-                        st.session_state.process_log.append(f"  • Coordinator cost: ${cost_str}/1M tokens")
+                        state.process_log.append(f"  • Coordinator cost: ${cost_str}/1M tokens")
                     # Notify user if reasoning was disabled for coordinator
                     if coordinator_metadata.get("reasoning_fallback"):
-                        st.session_state.process_log.append(f"  ⚠️ Coordinator model does not support reasoning mode, continued without it")
+                        state.process_log.append(f"  ⚠️ Coordinator model does not support reasoning mode, continued without it")
             else:
                 # Backward compatibility
                 final_answer = response_tuple
@@ -912,16 +958,15 @@ REASONING APPROACH:
                 for agent, response in agent_responses.items():
                     final_answer += f"--- {agent} ---\n{response}\n\n"
         
-        if 'process_log' in st.session_state:
-            st.session_state.process_log.append("Final answer synthesized successfully")
+        if hasattr(state, 'process_log') and state.process_log is not None:
+            state.process_log.append("Final answer synthesized successfully")
         
-        # Pass session_state for more detailed logging
-        import streamlit as st
-        log_conversation(combined_input, agent_responses, session_state=st.session_state if 'st' in globals() else None)
+        # Pass state for more detailed logging
+        log_conversation(combined_input, agent_responses, session_state=state)
         
         # Store usage data in session state
-        if 'usage_data' in st.session_state:
-            st.session_state.usage_data = usage_data
+        if hasattr(state, 'usage_data'):
+            state.usage_data = usage_data
             
         return final_answer, updated_agent_history
     

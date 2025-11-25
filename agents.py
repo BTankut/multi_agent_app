@@ -454,9 +454,9 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
                 # Lower score = better (tier bonus is negative for good models)
                 total_score = efficiency * 0.3 - relevance_score * 0.7 + recency_bonus + tier_bonus
 
-                # Log tier information for debugging
+                # Log tier information for debugging (reduced verbosity)
                 if model_tier <= 2:
-                    logger.info(f"Premium/Strong model detected: {model_name} (Tier {model_tier}, bonus: {tier_bonus})")
+                    logger.debug(f"Premium/Strong model detected: {model_name} (Tier {model_tier}, bonus: {tier_bonus})")
 
                 model_costs.append((model_name, total_score, provider, family_key, created_at))
             except (KeyError, TypeError) as e:
@@ -500,7 +500,7 @@ def select_optimized_models(matching_models, query_labels, openrouter_models):
 
         # Log tier 1-2 selections for debugging
         if model_tier <= 2:
-            logger.info(f"Selected premium model: {model} (Tier {model_tier})")
+            logger.debug(f"Selected premium model: {model} (Tier {model_tier})")
     
     return optimized_models
 
@@ -582,7 +582,7 @@ def limit_models_per_provider(models, max_per_provider=2, min_models=0, max_mode
 
         # Emit debug logs for premium picks
         if model_tier <= 2:
-            logger.info(f"Selected premium model: {model} (Tier {model_tier}, provider {provider})")
+            logger.debug(f"Selected premium model: {model} (Tier {model_tier}, provider {provider})")
 
         # Obey overall max model count if provided
         if max_models is not None and len(diversified_models) >= max_models:

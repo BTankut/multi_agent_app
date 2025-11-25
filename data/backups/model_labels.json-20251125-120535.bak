@@ -457,14 +457,14 @@
     ]
   },
   {
-    "model": "deepseek/deepseek-v3.1-terminus",
+    "model": "deepseek/deepseek-v3.1-terminus:exacto",
     "labels": [
       "general_assistant",
       "paid"
     ]
   },
   {
-    "model": "deepseek/deepseek-v3.1-terminus:exacto",
+    "model": "deepseek/deepseek-v3.1-terminus",
     "labels": [
       "general_assistant",
       "paid"
@@ -500,13 +500,6 @@
       "paid",
       "fast_response",
       "code_expert"
-    ]
-  },
-  {
-    "model": "arcee-ai/afm-4.5b",
-    "labels": [
-      "general_assistant",
-      "paid"
     ]
   },
   {
@@ -785,7 +778,7 @@
     ]
   },
   {
-    "model": "openai/gpt-oss-120b",
+    "model": "openai/gpt-oss-120b:exacto",
     "labels": [
       "general_assistant",
       "paid",
@@ -793,7 +786,7 @@
     ]
   },
   {
-    "model": "openai/gpt-oss-120b:exacto",
+    "model": "openai/gpt-oss-120b",
     "labels": [
       "general_assistant",
       "paid",
