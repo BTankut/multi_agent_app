@@ -55,6 +55,14 @@ class WebSocketLogHandler(logging.Handler):
         super().__init__()
         self.websocket = websocket
         self.loop = asyncio.get_event_loop()
+        self.current_coordinator = None
+
+    def set_coordinator(self, model_name):
+        self.current_coordinator = self.normalize_model_name(model_name)
+
+    def normalize_model_name(self, name):
+        if not name: return ""
+        return name.lower().replace(":free", "").strip()
 
     def emit(self, record):
         try:
@@ -67,8 +75,15 @@ class WebSocketLogHandler(logging.Handler):
 
             # Smart parsing for visualization
             if "Calling model:" in msg:
-                event_type = "agent_start"
-                payload["model"] = msg.split("Calling model:")[1].split("with")[0].strip()
+                raw_model_name = msg.split("Calling model:")[1].split("with")[0].strip()
+                model_name = self.normalize_model_name(raw_model_name)
+                
+                # If the called model is the coordinator itself, it's a planning step, not a worker task
+                if self.current_coordinator and model_name == self.current_coordinator:
+                    event_type = "coordinator_thinking"
+                else:
+                    event_type = "agent_start"
+                    payload["model"] = raw_model_name # Keep original name for display
             elif "received response from:" in msg:
                 event_type = "agent_finish"
                 payload["model"] = msg.split("received response from:")[1].strip()
@@ -94,23 +109,65 @@ class WebSocketLogHandler(logging.Handler):
 async def get():
     return FileResponse(str(static_path / "index.html"))
 
+# Global Cache
+CACHED_MODELS = []
+
+def load_models_cache():
+    """Load models from file cache or API."""
+    global CACHED_MODELS
+    cache_file = Path("data/models_cache.json")
+    
+    if cache_file.exists():
+        try:
+            with open(cache_file, 'r') as f:
+                data = json.load(f)
+                CACHED_MODELS = data.get("models", [])
+                logger.info(f"Loaded {len(CACHED_MODELS)} models from disk cache")
+                return
+        except Exception as e:
+            logger.error(f"Error loading cache: {e}")
+            
+    # Fallback to API
+    try:
+        CACHED_MODELS = get_openrouter_models()
+        # Save to disk
+        os.makedirs("data", exist_ok=True)
+        with open(cache_file, 'w') as f:
+            import datetime
+            json.dump({
+                "models": CACHED_MODELS,
+                "last_updated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }, f)
+    except Exception as e:
+        logger.error(f"Startup model fetch failed: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    load_models_cache()
+
 @app.get("/api/models")
 async def get_models(force_refresh: bool = False):
     """Fetch available models with caching."""
+    global CACHED_MODELS
     cache_file = Path("data/models_cache.json")
     
-    # Try to serve from cache first
+    # Try to serve from cache first if not forcing refresh
+    if not force_refresh and CACHED_MODELS:
+        return {"models": CACHED_MODELS}
+        
     if not force_refresh and cache_file.exists():
         try:
             with open(cache_file, 'r') as f:
                 cached_data = json.load(f)
+                CACHED_MODELS = cached_data.get("models", [])
                 return cached_data
-        except Exception as e:
-            logger.error(f"Error reading model cache: {e}")
+        except Exception:
+            pass
     
     # Fetch fresh data
     try:
         models = get_openrouter_models()
+        CACHED_MODELS = models # Update global cache
         
         # Create cache data with timestamp
         import datetime
@@ -154,6 +211,9 @@ async def websocket_endpoint(websocket: WebSocket):
                 query = request.get("payload", {}).get("query")
                 coordinator_model = request.get("payload", {}).get("coordinator_model", "anthropic/claude-3.5-sonnet")
                 
+                # Update handler with current coordinator
+                ws_handler.set_coordinator(coordinator_model)
+                
                 await manager.send_json({"type": "status", "data": "started"}, websocket)
                 
                 # Run blocking process_query in a separate thread to not block WebSocket loop
@@ -162,11 +222,15 @@ async def websocket_endpoint(websocket: WebSocket):
                 
                 # Wrapper to run sync function
                 def run_process():
+                    # Ensure we have models loaded
+                    if not CACHED_MODELS:
+                        load_models_cache()
+                        
                     return process_query(
                         query=query,
                         coordinator_model=coordinator_model,
                         option="free", # or get from request
-                        openrouter_models=get_openrouter_models()
+                        openrouter_models=CACHED_MODELS
                     )
                 
                 try:

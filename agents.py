@@ -600,6 +600,19 @@ def determine_complexity(query, labels):
     """
     Analyzes query complexity to determine appropriate model count.
     """
+    # Check for very simple/short queries first
+    is_short = len(query) < 50
+    has_complex_labels = any(l in labels for l in ["code_expert", "math_expert", "reasoning_expert"])
+    
+    # Keywords indicating complexity even in short queries
+    complex_keywords = ["compare", "analyze", "why", "how", "explain", "solve", "code", "script"]
+    has_complex_keywords = any(keyword in query.lower() for keyword in complex_keywords)
+    
+    if is_short and not has_complex_labels and not has_complex_keywords:
+        # Very simple query (e.g. "Hi", "What is the capital of France?")
+        # Use just 1 model + coordinator
+        return 1, 1
+
     # Base complexity from query length
     complexity = 1
     
