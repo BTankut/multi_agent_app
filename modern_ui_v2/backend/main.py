@@ -17,6 +17,8 @@ import uvicorn
 # Import core logic
 from utils import get_openrouter_models, logger as app_logger
 from coordinator import process_query
+import update_model_roles
+import update_model_labels
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -110,34 +112,40 @@ async def get():
     return FileResponse(str(static_path / "index.html"))
 
 # Global Cache
-CACHED_MODELS = []
+GLOBAL_CACHE = {
+    "models": [],
+    "last_updated": None
+}
 
 def load_models_cache():
     """Load models from file cache or API."""
-    global CACHED_MODELS
+    global GLOBAL_CACHE
     cache_file = Path("data/models_cache.json")
     
     if cache_file.exists():
         try:
             with open(cache_file, 'r') as f:
                 data = json.load(f)
-                CACHED_MODELS = data.get("models", [])
-                logger.info(f"Loaded {len(CACHED_MODELS)} models from disk cache")
+                GLOBAL_CACHE["models"] = data.get("models", [])
+                GLOBAL_CACHE["last_updated"] = data.get("last_updated")
+                logger.info(f"Loaded {len(GLOBAL_CACHE['models'])} models from disk cache")
                 return
         except Exception as e:
             logger.error(f"Error loading cache: {e}")
             
     # Fallback to API
     try:
-        CACHED_MODELS = get_openrouter_models()
+        models = get_openrouter_models()
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        GLOBAL_CACHE["models"] = models
+        GLOBAL_CACHE["last_updated"] = timestamp
+        
         # Save to disk
         os.makedirs("data", exist_ok=True)
         with open(cache_file, 'w') as f:
-            import datetime
-            json.dump({
-                "models": CACHED_MODELS,
-                "last_updated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            }, f)
+            json.dump(GLOBAL_CACHE, f)
     except Exception as e:
         logger.error(f"Startup model fetch failed: {e}")
 
@@ -148,42 +156,46 @@ async def startup_event():
 @app.get("/api/models")
 async def get_models(force_refresh: bool = False):
     """Fetch available models with caching."""
-    global CACHED_MODELS
+    global GLOBAL_CACHE
     cache_file = Path("data/models_cache.json")
     
-    # Try to serve from cache first if not forcing refresh
-    if not force_refresh and CACHED_MODELS:
-        return {"models": CACHED_MODELS}
+    # Try to serve from memory cache first
+    if not force_refresh and GLOBAL_CACHE["models"]:
+        return GLOBAL_CACHE
         
+    # Try to serve from disk cache
     if not force_refresh and cache_file.exists():
         try:
             with open(cache_file, 'r') as f:
                 cached_data = json.load(f)
-                CACHED_MODELS = cached_data.get("models", [])
-                return cached_data
+                GLOBAL_CACHE = cached_data # Update memory
+                return GLOBAL_CACHE
         except Exception:
             pass
     
     # Fetch fresh data
     try:
+        if force_refresh:
+            logger.info("Force refresh requested. Updating model roles and labels...")
+            # First update roles (definitions)
+            update_model_roles.update_model_roles()
+            # Then update labels (assignments) based on fresh API data
+            update_model_labels.update_model_labels()
+            logger.info("Model roles and labels updated successfully.")
+
         models = get_openrouter_models()
-        CACHED_MODELS = models # Update global cache
-        
-        # Create cache data with timestamp
         import datetime
-        cache_data = {
-            "models": models,
-            "last_updated": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
-        # Ensure directory exists
-        os.makedirs("data", exist_ok=True)
+        GLOBAL_CACHE["models"] = models
+        GLOBAL_CACHE["last_updated"] = timestamp
         
         # Save to cache
+        os.makedirs("data", exist_ok=True)
         with open(cache_file, 'w') as f:
-            json.dump(cache_data, f)
+            json.dump(GLOBAL_CACHE, f)
             
-        return cache_data
+        return GLOBAL_CACHE
     except Exception as e:
         logger.error(f"Error fetching models: {e}")
         return {"models": [], "last_updated": "Unknown"}
@@ -208,8 +220,11 @@ async def websocket_endpoint(websocket: WebSocket):
             request = json.loads(data)
             
             if request.get("type") == "query":
-                query = request.get("payload", {}).get("query")
-                coordinator_model = request.get("payload", {}).get("coordinator_model", "anthropic/claude-3.5-sonnet")
+                payload = request.get("payload", {})
+                query = payload.get("query")
+                coordinator_model = payload.get("coordinator_model", "anthropic/claude-3.5-sonnet")
+                option = payload.get("option", "free")
+                reasoning_mode = payload.get("reasoning_mode", "disabled")
                 
                 # Update handler with current coordinator
                 ws_handler.set_coordinator(coordinator_model)
@@ -223,14 +238,15 @@ async def websocket_endpoint(websocket: WebSocket):
                 # Wrapper to run sync function
                 def run_process():
                     # Ensure we have models loaded
-                    if not CACHED_MODELS:
+                    if not GLOBAL_CACHE["models"]:
                         load_models_cache()
                         
                     return process_query(
                         query=query,
                         coordinator_model=coordinator_model,
-                        option="free", # or get from request
-                        openrouter_models=CACHED_MODELS
+                        option=option,
+                        reasoning_mode=reasoning_mode,
+                        openrouter_models=GLOBAL_CACHE["models"]
                     )
                 
                 try:
