@@ -30,7 +30,7 @@ This project goes beyond simple routing. It features an **"AI-Powered Intelligen
 
 ## 🛠️ How It Works
 
-![System Architecture](assets/architecture.png)
+![System Architecture](assets/architecture_v2.png)
 
 1.  **Analysis:** The Coordinator model understands your query and determines the required skill tags.
 2.  **Team Assembly:** Models best suited for the determined tags (OpenAI, Anthropic, Google, Meta, etc.) are selected from the pool.
