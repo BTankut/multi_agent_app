@@ -53,7 +53,7 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
         # Log what we're doing
         logger.info(f"Using {len(relevant_history)} messages as context for label determination")
         
-        prompt = f"""You are a helpful assistant tasked with analyzing a user's query and identifying relevant labels.
+        prompt = f"""You are a Lead Coordinator for a team of AI agents. Your goal is to ensure high-quality, verified answers by selecting the right experts.
         
         Predefined Labels: {', '.join(available_labels)}
         
@@ -61,18 +61,27 @@ def determine_query_labels(query, coordinator_model, openrouter_models, coordina
         
         User's new query: {query}
         
-        Consider the conversation context and the new query.
+        Instructions:
+        1. Analyze the query complexity and domain.
+        2. Select labels that will trigger the right experts (e.g., 'math_expert', 'code_expert').
+        3. IMPORTANT: Even for simple factual queries, favor labels that encourage cross-verification (e.g., selecting 'general_assistant' along with a specialized label).
+        
         Return ONLY the labels for the new query, separated by commas. No additional explanation.
         Always respond in the same language as the user query.
         """
     else:
         # Standard prompt without context
         logger.info("No conversation history available for label determination")
-        prompt = f"""You are a helpful assistant tasked with analyzing a user's query and identifying relevant labels.
+        prompt = f"""You are a Lead Coordinator for a team of AI agents. Your goal is to ensure high-quality, verified answers by selecting the right experts.
         
         Predefined Labels: {', '.join(available_labels)}
         
         User Query: {query}
+        
+        Instructions:
+        1. Analyze the query complexity and domain.
+        2. Select labels that will trigger the right experts.
+        3. IMPORTANT: Even for simple factual queries, favor labels that encourage cross-verification.
         
         Return ONLY the labels, separated by commas. No additional explanation.
         Always respond in the same language as the user query.
@@ -179,16 +188,20 @@ def get_safe_session_state():
     Returns a safe session state object (dict-like) regardless of whether
     Streamlit is running or not.
     """
-    try:
-        import streamlit as st
-        from streamlit.runtime.scriptrunner import get_script_run_ctx
-        if get_script_run_ctx():
-            return st.session_state
-    except (ImportError, ModuleNotFoundError):
-        pass
-    except Exception:
-        # Catch other streamlit related errors (like missing context)
-        pass
+    # Only attempt to access Streamlit if it's actually loaded in this process
+    import sys
+    if 'streamlit' in sys.modules:
+        try:
+            import streamlit as st
+            from streamlit.runtime.scriptrunner import get_script_run_ctx
+            # Only try to access session state if we are in a script run context
+            if get_script_run_ctx():
+                return st.session_state
+        except (ImportError, ModuleNotFoundError):
+            pass
+        except Exception:
+            # Catch other streamlit related errors
+            pass
         
     # Return a dummy dict-like object that ignores assignments but allows retrieval
     # This prevents errors when running in headless mode
@@ -772,64 +785,46 @@ I need you to analyze multiple conflicting answers from different AI models and 
         if has_tiebreaker:
             combined_input += """## Synthesis Instructions
 
-Based on these responses, provide a single, concise, consolidated answer.
+You are the Lead Coordinator. Your job is NOT just to summarize, but to verify accuracy and resolve conflicts.
 
-CRITICAL FOR LOGIC PUZZLES AND MULTI-CHOICE PROBLEMS:
-- DO NOT simply count votes or take the majority opinion
-- Prioritize responses that methodically test ALL possibilities or scenarios
-- Verify that the selected answer satisfies ALL conditions in the problem without contradiction
-- Pay special attention to the METHODOLOGY used rather than just the final answer
-- In logic problems with conditional statements, verify how each model interprets these implications
-- Choose the response with the most rigorous logical analysis, even if it's just from one model
-- For complex problems, first identify which models have done the most thorough analysis
-- When a model restates the problem in its own words, check this against the original problem
-
-TIEBREAKER GUIDANCE:
-- The tiebreaker model was specifically tasked with carefully analyzing all agent responses
-- First check if the tiebreaker correctly understood the original problem (look for a PROBLEM VERIFICATION section)
-- If the tiebreaker misunderstood the problem, its analysis may be flawed regardless of its thoroughness
-- Evaluate the tiebreaker's reasoning process independently - is it logically sound and complete?
-- If the tiebreaker created a systematic framework (truth table, possibility matrix), verify its completeness
-- If the tiebreaker's reasoning is strong and methodical, prioritize its conclusion
-- If the tiebreaker missed important cases in its analysis, prefer models with more complete reasoning
-- If the tiebreaker identified ambiguities in the problem, acknowledge these in your response
-
-REASONING APPROACH:
-1. Identify the models that performed the most systematic and thorough analysis
-2. Verify their analysis against all problem constraints and conditions
-3. Choose the answer with the strongest logical foundation, not the most popular one
-4. Ensure the selected solution doesn't create any contradictions or impossibilities
-5. If models are interpreting the problem differently, explain the correct interpretation
-6. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.)
-7. Present math formulas in plain text format (use * for multiplication, / for division)
-8. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}
-9. Be direct and concise in your final answer
-10. Always respond in the same language as the original user query"""
+STRATEGY:
+1. Compare the responses from all agents.
+2. If they AGREE: Confirm the information is correct and present it clearly.
+3. If they DISAGREE:
+    - Trust the 'Tiebreaker' analysis if it provides a sound logical framework (truth table, step-by-step proof).
+    - If no tiebreaker, evaluate which agent used better reasoning or provided evidence.
+    - Explicitly mention the conflict and how you resolved it.
+4. CRITICAL FOR LOGIC/MATH:
+    - Do not vote. Verify the steps.
+    - Check against the original problem constraints.
+5. FORMATTING:
+    - No LaTeX. Use plain text for math (e.g., * for multiplication).
+    - Use bold (**text**) for key answers.
+    - Be concise and direct.
+6. LANGUAGE:
+    - Always respond in the same language as the original user query.
+"""
         else:
             combined_input += """## Synthesis Instructions
 
-Based on these responses, provide a single, concise, consolidated answer.
+You are the Lead Coordinator. Your job is NOT just to summarize, but to verify accuracy and resolve conflicts.
 
-CRITICAL FOR LOGIC PUZZLES AND MULTI-CHOICE PROBLEMS:
-- DO NOT simply count votes or take the majority opinion
-- Prioritize responses that methodically test ALL possibilities or scenarios
-- Verify that the selected answer satisfies ALL conditions in the problem without contradiction
-- Pay special attention to the METHODOLOGY used rather than just the final answer
-- In logic problems with conditional statements, verify how each model interprets these implications
-- Choose the response with the most rigorous logical analysis, even if it's just from one model
-- For complex problems, first identify which models have done the most thorough analysis
-
-REASONING APPROACH:
-1. Identify the models that performed the most systematic and thorough analysis
-2. Verify their analysis against all problem constraints and conditions
-3. Choose the answer with the strongest logical foundation, not the most popular one
-4. Ensure the selected solution doesn't create any contradictions or impossibilities
-5. DO NOT use LaTeX formatting (like \\boxed{}, \\frac{}, \\sqrt{}, etc.)
-6. Present math formulas in plain text format (use * for multiplication, / for division)
-7. Use markdown boldface (e.g., **12**) for highlighting instead of \\boxed{12}
-8. Be direct and concise in your final answer
-9. Skip pleasantries and unnecessary explanations
-10. Always respond in the same language as the original user query"""
+STRATEGY:
+1. Compare the responses from all agents.
+2. If they AGREE: Confirm the information is correct and present it clearly.
+3. If they DISAGREE:
+    - Analyze which agent provides better reasoning, evidence, or methodology.
+    - Explicitly mention the conflict and how you resolved it (e.g., "Agent A claims X, but Agent B correctly points out Y...").
+4. CRITICAL FOR LOGIC/MATH:
+    - Do not vote. Verify the steps.
+    - Check against the original problem constraints.
+5. FORMATTING:
+    - No LaTeX. Use plain text for math (e.g., * for multiplication).
+    - Use bold (**text**) for key answers.
+    - Be concise and direct.
+6. LANGUAGE:
+    - Always respond in the same language as the original user query.
+"""
         
         # Store the coordinator messages for UI display
         if hasattr(state, 'coordinator_messages'):

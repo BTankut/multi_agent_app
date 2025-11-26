@@ -24,6 +24,7 @@ logs_dir.mkdir(exist_ok=True)
 # Setup logger with both console and file handlers
 logger = logging.getLogger("multi_agent_app")
 logger.setLevel(logging.DEBUG)  # Set to DEBUG level to capture everything
+logger.propagate = False  # Prevent propagation to root logger to avoid duplicate logs
 
 # Clear any existing handlers to avoid duplicates when reloading module
 if logger.handlers:

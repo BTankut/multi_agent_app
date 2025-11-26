@@ -156,12 +156,25 @@ def is_text_compatible_model(model_name, openrouter_models):
     - Models that don't have 'text' in output_modalities
     - Models specifically designed for image generation (image-preview, image-generation in name)
     """
-    # Check model name for image-specific indicators
-    image_only_patterns = ['-image-preview', '-image-generation', '/image-', '-to-image']
+    # Stronger filtering for image-focused models in text queries
+    # These patterns indicate models that prioritize image generation or are multimodal-focused in a way that might be overkill/wrong for pure text
+    image_only_patterns = [
+        '-image-preview', '-image-generation', '/image-', '-to-image', 'image-mini',
+        'dall-e', 'midjourney', 'stable-diffusion', 'flux', 
+        '-vision-preview', '-video', 'tts', 'audio'
+    ]
+    
     model_lower = model_name.lower()
     for pattern in image_only_patterns:
         if pattern in model_lower:
-            logger.info(f"Filtering out image-focused model: {model_name}")
+            # Exception: Some vision models are also great text models (like gpt-4-vision, claude-3-opus)
+            # But specific 'image-preview' or 'image-generation' usually implies generation focus
+            # We'll keep "vision" models ONLY if they don't have "image" in the name, assuming they are multimodal chat
+            if "vision" in pattern and "image" not in model_lower:
+                continue
+            
+            # STRICT BLOCK: If the name explicitly contains "image" and it's not a known exception
+            logger.info(f"Filtering out image/media-focused model: {model_name}")
             return False
 
     # Check OpenRouter architecture info
@@ -373,7 +386,6 @@ def get_models_by_labels(labels, option, openrouter_models, min_models=1, max_mo
     # Apply provider diversity constraints with tier-aware limits and global caps
     filtered_models = limit_models_per_provider(
         filtered_models, 
-        max_per_provider=2, 
         min_models=min_models, 
         max_models=max_models, 
         openrouter_models=openrouter_models
@@ -528,16 +540,14 @@ def calculate_similarity(response1, response2):
     
     return min(randomized_similarity, 1.0)
 
-def limit_models_per_provider(models, max_per_provider=2, min_models=0, max_models=None, openrouter_models=None):
+def limit_models_per_provider(models, max_per_provider=1, min_models=0, max_models=None, openrouter_models=None):
     """
-    Limits the number of models from each provider to avoid rate limiting issues.
-    Tier 1-2 models can take up to 3 slots per provider, Tier 3-4 models respect max_per_provider.
-    Honors min_models/max_models and keeps model family diversity while preferring higher tiers.
-    Filters out beta models for stability.
+    Limits the number of models from each provider to maximize diversity.
+    Strictly enforces max_per_provider (default 1) to ensure we get e.g. 1 OpenAI, 1 Anthropic, 1 Google.
     
-    Example:
-        - Input: ["anthropic/claude-3", "anthropic/claude-2", "google/gemini-1", "google/gemini-2", "google/gemini-3"]
-        - Output (with max_per_provider=2): ["anthropic/claude-3", "google/gemini-1"]
+    Tier 1 (Flagship) Exception: 
+    If we really need more models to meet min_models, we might allow a 2nd model from a provider, 
+    but ONLY if it's a top-tier model and we can't find other providers.
     """
     if not models:
         return []
@@ -554,8 +564,6 @@ def limit_models_per_provider(models, max_per_provider=2, min_models=0, max_mode
         # Skip beta/alpha models for stability
         if ":beta" in model or ":alpha" in model:
             continue
-            
-        # Add to stable models list
         stable_models.append(model)
     
     # If filtering removed all models, revert to original list
@@ -565,31 +573,51 @@ def limit_models_per_provider(models, max_per_provider=2, min_models=0, max_mode
     # Now process the filtered models
     for model in stable_models:
         provider, family_key = extract_provider_and_family(model)
-        model_tier = get_model_tier(model)
-        provider_limit = 3 if model_tier <= 2 else max_per_provider
-
-        # Skip if we've already selected from this model family or reached provider limit
-        provider_at_limit = provider_counts.get(provider, 0) >= provider_limit
-        family_taken = family_key in family_selected
-
-        if (provider_at_limit or family_taken) and len(diversified_models) >= min_models:
+        
+        # Strict provider limit: Default is 1 per provider
+        # Only relax this if we are desperate to meet min_models count later (not in this loop)
+        if provider_counts.get(provider, 0) >= max_per_provider:
             continue
             
-        # Add model and increment provider count
+        # Always allow only 1 model per family (e.g. don't pick both claude-3-opus and claude-3-sonnet)
+        if family_key in family_selected:
+            continue
+
+        # Add model and update tracking
         diversified_models.append(model)
         provider_counts[provider] = provider_counts.get(provider, 0) + 1
         family_selected.add(family_key)
-
-        # Emit debug logs for premium picks
-        if model_tier <= 2:
-            logger.debug(f"Selected premium model: {model} (Tier {model_tier}, provider {provider})")
 
         # Obey overall max model count if provided
         if max_models is not None and len(diversified_models) >= max_models:
             break
             
+    # If we haven't met min_models, do a second pass allowing a 2nd model from same provider
+    # But ONLY for different families (e.g. GPT-4 and O1 is okay, but not GPT-4 and GPT-4-Turbo)
+    if len(diversified_models) < min_models:
+        for model in stable_models:
+            if model in diversified_models:
+                continue
+                
+            provider, family_key = extract_provider_and_family(model)
+            
+            # Still enforce family uniqueness
+            if family_key in family_selected:
+                continue
+                
+            # Allow up to 2 per provider in this fallback pass
+            if provider_counts.get(provider, 0) >= 2:
+                continue
+                
+            diversified_models.append(model)
+            provider_counts[provider] = provider_counts.get(provider, 0) + 1
+            family_selected.add(family_key)
+            
+            if len(diversified_models) >= min_models:
+                break
+            
     # Log the model selection for debugging
-    logger.info(f"Selected {len(diversified_models)} models after applying tier-aware provider diversity constraints")
+    logger.info(f"Selected {len(diversified_models)} models after applying strict provider diversity (max {max_per_provider}/provider)")
     for provider, count in provider_counts.items():
         if count > 0:
             logger.info(f"  - {provider}: {count} models")
@@ -599,27 +627,26 @@ def limit_models_per_provider(models, max_per_provider=2, min_models=0, max_mode
 def determine_complexity(query, labels):
     """
     Analyzes query complexity to determine appropriate model count.
+    Optimized to prevent overkill on simple queries.
     """
-    # Check for very simple/short queries first
-    is_short = len(query) < 50
-    has_complex_labels = any(l in labels for l in ["code_expert", "math_expert", "reasoning_expert"])
+    # 1. Check for very simple/short queries (Simple Factual)
+    # e.g. "Capital of France", "Who is CEO of Apple"
+    is_short = len(query) < 80
+    has_complex_labels = any(l in labels for l in ["code_expert", "math_expert", "reasoning_expert", "creative_writer"])
     
-    # Keywords indicating complexity even in short queries
-    complex_keywords = ["compare", "analyze", "why", "how", "explain", "solve", "code", "script"]
+    # Keywords indicating complexity
+    complex_keywords = ["compare", "analyze", "why", "how", "explain", "solve", "code", "script", "debug", "optimize", "story", "essay"]
     has_complex_keywords = any(keyword in query.lower() for keyword in complex_keywords)
     
     if is_short and not has_complex_labels and not has_complex_keywords:
-        # Very simple query (e.g. "Hi", "What is the capital of France?")
-        # Use just 1 model + coordinator
-        return 1, 1
+        # Simple query: Strictly 2 models for verification
+        return 2, 2
 
-    # Base complexity from query length
-    complexity = 1
+    # 2. Standard Queries
+    complexity = 2
     
     # Adjust based on query length
-    if len(query) > 200:
-        complexity += 2
-    elif len(query) > 100:
+    if len(query) > 300:
         complexity += 1
     
     # Adjust based on specialized labels
@@ -629,17 +656,9 @@ def determine_complexity(query, labels):
         complexity += 1
     if "reasoning_expert" in labels:
         complexity += 1
-    if "vision_expert" in labels:
-        complexity += 1
-    if "creative_writer" in labels:
-        complexity += 1
-    
-    # Additional complexity factors
-    keywords = ["analyze", "compare", "evaluate", "synthesize", "design", "explain", "create", "solve"]
-    complexity += sum(1 for keyword in keywords if keyword.lower() in query.lower()) / 2
-    
-    # Convert to model counts
-    min_models = max(1, int(complexity))
-    max_models = max(3, min_models + 2)
+        
+    # Cap complexity
+    min_models = min(max(2, int(complexity)), 3) # Usually 2 or 3
+    max_models = min_models + 1                  # Max 3 or 4
     
     return min_models, max_models

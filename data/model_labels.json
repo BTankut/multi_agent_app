@@ -54,14 +54,6 @@
     ]
   },
   {
-    "model": "x-ai/grok-4.1-fast",
-    "labels": [
-      "general_assistant",
-      "fast_response",
-      "free"
-    ]
-  },
-  {
     "model": "x-ai/grok-4.1-fast:free",
     "labels": [
       "general_assistant",
@@ -2273,6 +2265,14 @@
     ]
   },
   {
+    "model": "anthropic/claude-3.5-haiku",
+    "labels": [
+      "general_assistant",
+      "fast_response",
+      "paid"
+    ]
+  },
+  {
     "model": "anthropic/claude-3.5-haiku-20241022",
     "labels": [
       "fast_response",
@@ -2283,10 +2283,9 @@
     ]
   },
   {
-    "model": "anthropic/claude-3.5-haiku",
+    "model": "anthracite-org/magnum-v4-72b",
     "labels": [
       "general_assistant",
-      "fast_response",
       "paid"
     ]
   },
@@ -2297,13 +2296,6 @@
       "reasoning_expert",
       "math_expert",
       "code_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "anthracite-org/magnum-v4-72b",
-    "labels": [
-      "general_assistant",
       "paid"
     ]
   },
@@ -2373,20 +2365,20 @@
     ]
   },
   {
+    "model": "meta-llama/llama-3.2-1b-instruct",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "paid"
+    ]
+  },
+  {
     "model": "meta-llama/llama-3.2-11b-vision-instruct",
     "labels": [
       "general_assistant",
       "instruction_following",
       "paid",
       "vision_expert"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3.2-1b-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
     ]
   },
   {
@@ -2441,6 +2433,15 @@
     ]
   },
   {
+    "model": "cohere/command-r-08-2024",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "conversationalist",
+      "paid"
+    ]
+  },
+  {
     "model": "cohere/command-r-plus-08-2024",
     "labels": [
       "general_assistant",
@@ -2449,15 +2450,6 @@
       "conversationalist",
       "math_expert",
       "code_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "cohere/command-r-08-2024",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "conversationalist",
       "paid"
     ]
   },
@@ -2548,6 +2540,14 @@
     ]
   },
   {
+    "model": "meta-llama/llama-3.1-8b-instruct",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "paid"
+    ]
+  },
+  {
     "model": "meta-llama/llama-3.1-405b-instruct",
     "labels": [
       "general_assistant",
@@ -2566,14 +2566,6 @@
     ]
   },
   {
-    "model": "meta-llama/llama-3.1-8b-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
-    ]
-  },
-  {
     "model": "mistralai/mistral-nemo:free",
     "labels": [
       "general_assistant",
@@ -2588,21 +2580,21 @@
     ]
   },
   {
+    "model": "openai/gpt-4o-mini",
+    "labels": [
+      "general_assistant",
+      "math_expert",
+      "code_expert",
+      "paid"
+    ]
+  },
+  {
     "model": "openai/gpt-4o-mini-2024-07-18",
     "labels": [
       "fast_response",
       "general_assistant",
       "math_expert",
       "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "openai/gpt-4o-mini",
-    "labels": [
-      "general_assistant",
-      "math_expert",
-      "code_expert",
       "paid"
     ]
   },
@@ -2630,6 +2622,21 @@
     ]
   },
   {
+    "model": "mistralai/mistral-7b-instruct-v0.3",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "paid"
+    ]
+  },
+  {
+    "model": "nousresearch/hermes-2-pro-llama-3-8b",
+    "labels": [
+      "general_assistant",
+      "paid"
+    ]
+  },
+  {
     "model": "mistralai/mistral-7b-instruct:free",
     "labels": [
       "general_assistant",
@@ -2642,21 +2649,6 @@
     "labels": [
       "general_assistant",
       "instruction_following",
-      "paid"
-    ]
-  },
-  {
-    "model": "mistralai/mistral-7b-instruct-v0.3",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
-    ]
-  },
-  {
-    "model": "nousresearch/hermes-2-pro-llama-3-8b",
-    "labels": [
-      "general_assistant",
       "paid"
     ]
   },
@@ -2675,15 +2667,6 @@
       "instruction_following",
       "general_assistant",
       "code_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "openai/gpt-4o-2024-05-13",
-    "labels": [
-      "general_assistant",
-      "math_expert",
-      "reasoning_expert",
       "paid"
     ]
   },
@@ -2715,12 +2698,12 @@
     ]
   },
   {
-    "model": "meta-llama/llama-3-70b-instruct",
+    "model": "openai/gpt-4o-2024-05-13",
     "labels": [
       "general_assistant",
-      "instruction_following",
-      "paid",
-      "reasoning_expert"
+      "math_expert",
+      "reasoning_expert",
+      "paid"
     ]
   },
   {
@@ -2729,6 +2712,15 @@
       "general_assistant",
       "instruction_following",
       "paid"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3-70b-instruct",
+    "labels": [
+      "general_assistant",
+      "instruction_following",
+      "paid",
+      "reasoning_expert"
     ]
   },
   {
@@ -2784,19 +2776,19 @@
     ]
   },
   {
-    "model": "openai/gpt-3.5-turbo-0613",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "openai/gpt-4-turbo-preview",
     "labels": [
       "experimental",
       "general_assistant",
       "math_expert",
       "reasoning_expert",
+      "paid"
+    ]
+  },
+  {
+    "model": "openai/gpt-3.5-turbo-0613",
+    "labels": [
+      "general_assistant",
       "paid"
     ]
   },
@@ -2866,7 +2858,7 @@
     ]
   },
   {
-    "model": "openai/gpt-3.5-turbo-instruct",
+    "model": "mistralai/mistral-7b-instruct-v0.1",
     "labels": [
       "general_assistant",
       "instruction_following",
@@ -2874,7 +2866,7 @@
     ]
   },
   {
-    "model": "mistralai/mistral-7b-instruct-v0.1",
+    "model": "openai/gpt-3.5-turbo-instruct",
     "labels": [
       "general_assistant",
       "instruction_following",
@@ -2910,13 +2902,6 @@
     ]
   },
   {
-    "model": "openai/gpt-3.5-turbo",
-    "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
     "model": "openai/gpt-4-0314",
     "labels": [
       "general_assistant",
@@ -2931,6 +2916,13 @@
       "general_assistant",
       "math_expert",
       "reasoning_expert",
+      "paid"
+    ]
+  },
+  {
+    "model": "openai/gpt-3.5-turbo",
+    "labels": [
+      "general_assistant",
       "paid"
     ]
   }
