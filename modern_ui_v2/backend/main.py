@@ -9,7 +9,7 @@ from typing import List, Dict, Any
 # Add parent directory to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, BackgroundTasks, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import uvicorn
@@ -19,6 +19,7 @@ from utils import get_openrouter_models, logger as app_logger
 from coordinator import process_query
 import update_model_roles
 import update_model_labels
+import model_intelligence  # New module
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -199,6 +200,28 @@ async def get_models(force_refresh: bool = False):
     except Exception as e:
         logger.error(f"Error fetching models: {e}")
         return {"models": [], "last_updated": "Unknown"}
+
+@app.post("/api/analyze-models")
+async def analyze_models_endpoint(background_tasks: BackgroundTasks):
+    """
+    Triggers a comprehensive analysis of all models using Grok 4.1 (or configured analyst).
+    This is a long-running process, so it runs in the background.
+    """
+    def run_analysis():
+        try:
+            logger.info("Starting background model analysis...")
+            result = model_intelligence.analyze_models()
+            if result.get("success"):
+                logger.info(f"Analysis complete. Processed {result.get('count')} models.")
+                # Update global cache to reflect new intelligence
+                load_models_cache()
+            else:
+                logger.error(f"Analysis failed: {result.get('error')}")
+        except Exception as e:
+            logger.error(f"Exception in background analysis: {e}")
+
+    background_tasks.add_task(run_analysis)
+    return {"status": "started", "message": "Model analysis started in background. Check logs for progress."}
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

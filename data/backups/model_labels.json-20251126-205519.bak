@@ -3,16 +3,16 @@
     "model": "anthropic/claude-opus-4.5",
     "labels": [
       "code_expert",
-      "reasoning_expert",
-      "general_assistant",
       "math_expert",
-      "paid"
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openrouter/bert-nebulon-alpha",
     "labels": [
-      "free",
+      "reasoning_expert",
       "vision_expert",
       "general_assistant"
     ]
@@ -20,511 +20,405 @@
   {
     "model": "allenai/olmo-3-32b-think",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "allenai/olmo-3-7b-instruct",
     "labels": [
-      "general_assistant",
-      "paid",
-      "instruction_following"
+      "general_assistant"
     ]
   },
   {
     "model": "allenai/olmo-3-7b-think",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
-    ]
-  },
-  {
-    "model": "google/gemini-3-pro-image-preview",
-    "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "vision_expert",
-      "fast_response",
-      "experimental",
-      "paid",
-      "math_expert"
-    ]
-  },
-  {
-    "model": "x-ai/grok-4.1-fast",
-    "labels": [
-      "general_assistant",
-      "fast_response",
-      "free"
+      "general_assistant"
     ]
   },
   {
     "model": "x-ai/grok-4.1-fast:free",
     "labels": [
-      "general_assistant",
-      "fast_response",
-      "free"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemini-3-pro-preview",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
       "vision_expert",
-      "code_expert",
-      "fast_response",
-      "experimental",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "deepcogito/cogito-v2.1-671b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-5.1",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-5.1-chat",
     "labels": [
-      "general_assistant",
-      "paid",
-      "conversationalist"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-5.1-codex",
     "labels": [
-      "general_assistant",
-      "paid",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert",
+      "vision_expert"
     ]
   },
   {
     "model": "openai/gpt-5.1-codex-mini",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "kwaipilot/kat-coder-pro:free",
     "labels": [
-      "general_assistant",
       "code_expert",
-      "free"
+      "reasoning_expert"
     ]
   },
   {
     "model": "moonshotai/kimi-linear-48b-a3b-instruct",
     "labels": [
-      "general_assistant",
-      "paid",
-      "instruction_following"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "moonshotai/kimi-k2-thinking",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "amazon/nova-premier-v1",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "perplexity/sonar-pro-search",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/voxtral-small-24b-2507",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-oss-safeguard-20b",
     "labels": [
-      "general_assistant",
-      "paid",
       "reasoning_expert"
     ]
   },
   {
     "model": "nvidia/nemotron-nano-12b-v2-vl:free",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "free",
-      "vision_expert"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "nvidia/nemotron-nano-12b-v2-vl",
     "labels": [
-      "general_assistant",
-      "paid",
       "reasoning_expert",
-      "vision_expert"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "minimax/minimax-m2",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "fast_response",
-      "paid"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "liquid/lfm2-8b-a1b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "liquid/lfm-2.2-6b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "ibm-granite/granite-4.0-h-micro",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "deepcogito/cogito-v2-preview-llama-405b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "experimental",
-      "reasoning_expert"
-    ]
-  },
-  {
-    "model": "openai/gpt-5-image-mini",
-    "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
-      "vision_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "anthropic/claude-haiku-4.5",
     "labels": [
-      "general_assistant",
       "code_expert",
       "reasoning_expert",
-      "fast_response",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-vl-8b-thinking",
     "labels": [
-      "general_assistant",
+      "math_expert",
       "reasoning_expert",
       "vision_expert",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-vl-8b-instruct",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
       "vision_expert",
-      "instruction_following",
-      "paid"
-    ]
-  },
-  {
-    "model": "openai/gpt-5-image",
-    "labels": [
-      "general_assistant",
-      "paid",
-      "vision_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "openai/o3-deep-research",
     "labels": [
-      "general_assistant",
-      "paid",
-      "math_expert",
-      "code_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/o4-mini-deep-research",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "baidu/ernie-4.5-21b-a3b-thinking",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "paid",
-      "math_expert"
-    ]
-  },
-  {
-    "model": "google/gemini-2.5-flash-image",
-    "labels": [
-      "general_assistant",
-      "vision_expert",
+      "math_expert",
       "reasoning_expert",
-      "fast_response",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-vl-30b-a3b-thinking",
     "labels": [
-      "general_assistant",
+      "math_expert",
       "reasoning_expert",
       "vision_expert",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-vl-30b-a3b-instruct",
     "labels": [
-      "general_assistant",
-      "paid",
+      "reasoning_expert",
       "vision_expert",
-      "instruction_following"
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-5-pro",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "code_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "z-ai/glm-4.6",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "reasoning_expert",
+      "creative_writer"
     ]
   },
   {
     "model": "z-ai/glm-4.6:exacto",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "reasoning_expert",
+      "creative_writer"
     ]
   },
   {
     "model": "anthropic/claude-sonnet-4.5",
     "labels": [
-      "general_assistant",
       "code_expert",
-      "reasoning_expert",
-      "paid",
-      "math_expert"
+      "reasoning_expert"
     ]
   },
   {
     "model": "deepseek/deepseek-v3.2-exp",
     "labels": [
-      "general_assistant",
-      "paid",
-      "experimental"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "thedrummer/cydonia-24b-v4.1",
     "labels": [
-      "general_assistant",
-      "paid"
+      "creative_writer"
     ]
   },
   {
     "model": "relace/relace-apply-3",
     "labels": [
-      "general_assistant",
-      "paid",
       "code_expert"
     ]
   },
   {
     "model": "google/gemini-2.5-flash-preview-09-2025",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "fast_response",
-      "experimental",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "google/gemini-2.5-flash-lite-preview-09-2025",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "fast_response",
-      "experimental",
-      "paid",
-      "math_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "qwen/qwen3-vl-235b-a22b-thinking",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "vision_expert",
-      "paid",
-      "math_expert"
+      "vision_expert"
     ]
   },
   {
     "model": "qwen/qwen3-vl-235b-a22b-instruct",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "vision_expert",
-      "instruction_following",
-      "paid"
+      "vision_expert"
     ]
   },
   {
     "model": "qwen/qwen3-max",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "qwen/qwen3-coder-plus",
     "labels": [
-      "general_assistant",
-      "paid",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "openai/gpt-5-codex",
     "labels": [
-      "general_assistant",
-      "paid",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "deepseek/deepseek-v3.1-terminus:exacto",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "deepseek/deepseek-v3.1-terminus",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "x-ai/grok-4-fast",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
-      "reasoning_expert"
+      "reasoning_expert",
+      "vision_expert"
     ]
   },
   {
     "model": "alibaba/tongyi-deepresearch-30b-a3b:free",
     "labels": [
-      "general_assistant",
-      "free"
+      "reasoning_expert"
     ]
   },
   {
     "model": "alibaba/tongyi-deepresearch-30b-a3b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert"
     ]
   },
   {
     "model": "qwen/qwen3-coder-flash",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
       "code_expert"
     ]
   },
   {
     "model": "opengvlab/internvl3-78b",
     "labels": [
-      "general_assistant",
-      "paid",
       "reasoning_expert",
       "vision_expert"
     ]
@@ -532,1168 +426,1074 @@
   {
     "model": "qwen/qwen3-next-80b-a3b-thinking",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-next-80b-a3b-instruct",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "instruction_following",
-      "paid"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meituan/longcat-flash-chat:free",
     "labels": [
-      "general_assistant",
-      "fast_response",
-      "free",
-      "conversationalist"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meituan/longcat-flash-chat",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
-      "conversationalist"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen-plus-2025-07-28",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen-plus-2025-07-28:thinking",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "nvidia/nemotron-nano-9b-v2:free",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "free"
+      "general_assistant"
     ]
   },
   {
     "model": "nvidia/nemotron-nano-9b-v2",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "moonshotai/kimi-k2-0905",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "moonshotai/kimi-k2-0905:exacto",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "deepcogito/cogito-v2-preview-llama-70b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "experimental",
+      "code_expert",
+      "math_expert",
       "reasoning_expert"
     ]
   },
   {
     "model": "deepcogito/cogito-v2-preview-llama-109b-moe",
     "labels": [
-      "general_assistant",
-      "paid",
-      "experimental",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "deepcogito/cogito-v2-preview-deepseek-671b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "experimental",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "stepfun-ai/step3",
     "labels": [
-      "general_assistant",
+      "math_expert",
       "reasoning_expert",
-      "vision_expert",
-      "code_expert",
-      "paid"
+      "vision_expert"
     ]
   },
   {
     "model": "qwen/qwen3-30b-a3b-thinking-2507",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
+      "math_expert",
       "reasoning_expert"
     ]
   },
   {
     "model": "x-ai/grok-code-fast-1",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "fast_response",
-      "paid"
+      "reasoning_expert"
     ]
   },
   {
     "model": "nousresearch/hermes-4-70b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "nousresearch/hermes-4-405b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
-    ]
-  },
-  {
-    "model": "google/gemini-2.5-flash-image-preview",
-    "labels": [
-      "general_assistant",
-      "vision_expert",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "fast_response",
-      "experimental",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "deepseek/deepseek-chat-v3.1",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
       "reasoning_expert",
-      "conversationalist"
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4o-audio-preview",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "paid",
+      "code_expert",
       "math_expert",
-      "experimental"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-medium-3.1",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "baidu/ernie-4.5-21b-a3b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "baidu/ernie-4.5-vl-28b-a3b",
     "labels": [
-      "general_assistant",
-      "paid",
       "reasoning_expert",
-      "vision_expert"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "z-ai/glm-4.5v",
     "labels": [
-      "general_assistant",
-      "paid",
-      "vision_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "ai21/jamba-mini-1.7",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "ai21/jamba-large-1.7",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-5-chat",
     "labels": [
-      "general_assistant",
-      "paid",
-      "conversationalist"
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-5",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "code_expert"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-5-mini",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-5-nano",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-oss-120b:exacto",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-oss-120b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-oss-20b:free",
     "labels": [
-      "general_assistant",
-      "free"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-oss-20b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "anthropic/claude-opus-4.1",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/codestral-2508",
     "labels": [
-      "general_assistant",
-      "paid",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "qwen/qwen3-coder-30b-a3b-instruct",
     "labels": [
-      "general_assistant",
-      "paid",
       "code_expert",
-      "instruction_following"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-30b-a3b-instruct-2507",
     "labels": [
-      "general_assistant",
-      "paid",
-      "instruction_following"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "z-ai/glm-4.5",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "z-ai/glm-4.5-air:free",
     "labels": [
-      "general_assistant",
-      "free"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "z-ai/glm-4.5-air",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-235b-a22b-thinking-2507",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "z-ai/glm-4-32b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-coder:free",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "free",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "qwen/qwen3-coder",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "qwen/qwen3-coder:exacto",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "bytedance/ui-tars-1.5-7b",
     "labels": [
-      "general_assistant",
-      "paid",
+      "reasoning_expert",
       "vision_expert"
     ]
   },
   {
     "model": "google/gemini-2.5-flash-lite",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "fast_response",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-235b-a22b-2507",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "switchpoint/router",
     "labels": [
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "moonshotai/kimi-k2:free",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "reasoning_expert",
-      "free",
-      "code_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "moonshotai/kimi-k2",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
       "reasoning_expert",
-      "code_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "thudm/glm-4.1v-9b-thinking",
     "labels": [
-      "general_assistant",
-      "paid",
+      "reasoning_expert",
       "vision_expert"
     ]
   },
   {
     "model": "mistralai/devstral-medium",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "mistralai/devstral-small",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
     "labels": [
-      "general_assistant",
-      "free"
+      "general_assistant"
     ]
   },
   {
     "model": "x-ai/grok-4",
     "labels": [
-      "general_assistant",
-      "paid",
       "reasoning_expert",
-      "vision_expert"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemma-3n-e2b-it:free",
     "labels": [
-      "general_assistant",
-      "free"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "tencent/hunyuan-a13b-instruct",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "instruction_following",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "tngtech/deepseek-r1t2-chimera:free",
     "labels": [
-      "general_assistant",
-      "free"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "tngtech/deepseek-r1t2-chimera",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "morph/morph-v3-large",
     "labels": [
-      "general_assistant",
-      "paid",
       "code_expert"
     ]
   },
   {
     "model": "morph/morph-v3-fast",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
       "code_expert"
     ]
   },
   {
     "model": "baidu/ernie-4.5-vl-424b-a47b",
     "labels": [
-      "general_assistant",
-      "paid",
       "reasoning_expert",
-      "vision_expert"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "baidu/ernie-4.5-300b-a47b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "thedrummer/anubis-70b-v1.1",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "creative_writer"
     ]
   },
   {
     "model": "inception/mercury",
     "labels": [
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-small-3.2-24b-instruct:free",
     "labels": [
-      "general_assistant",
-      "fast_response",
-      "free",
-      "instruction_following"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-small-3.2-24b-instruct",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
-      "instruction_following"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "minimax/minimax-m1",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemini-2.5-flash",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "fast_response",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemini-2.5-pro",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "fast_response",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "moonshotai/kimi-dev-72b",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
       "reasoning_expert"
     ]
   },
   {
     "model": "openai/o3-pro",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "code_expert",
-      "paid",
-      "math_expert"
+      "reasoning_expert"
     ]
   },
   {
     "model": "x-ai/grok-3-mini",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
+      "reasoning_expert"
     ]
   },
   {
     "model": "x-ai/grok-3",
     "labels": [
-      "general_assistant",
-      "paid",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/magistral-small-2506",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
+      "reasoning_expert"
     ]
   },
   {
     "model": "mistralai/magistral-medium-2506:thinking",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/magistral-medium-2506",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemini-2.5-pro-preview",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "fast_response",
-      "experimental",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "deepseek/deepseek-r1-0528-qwen3-8b:free",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "free"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "deepseek/deepseek-r1-0528-qwen3-8b",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
+      "math_expert",
       "reasoning_expert"
     ]
   },
   {
     "model": "deepseek/deepseek-r1-0528:free",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "free"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "deepseek/deepseek-r1-0528",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
+      "math_expert",
       "reasoning_expert"
     ]
   },
   {
     "model": "anthropic/claude-opus-4",
     "labels": [
-      "general_assistant",
       "code_expert",
-      "reasoning_expert",
-      "paid",
-      "math_expert"
+      "reasoning_expert"
     ]
   },
   {
     "model": "anthropic/claude-sonnet-4",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "paid",
-      "math_expert"
+      "reasoning_expert"
     ]
   },
   {
     "model": "mistralai/devstral-small-2505",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "google/gemma-3n-e4b-it:free",
     "labels": [
-      "general_assistant",
       "vision_expert",
-      "free"
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemma-3n-e4b-it",
     "labels": [
-      "general_assistant",
-      "paid",
-      "vision_expert"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/codex-mini",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
       "code_expert"
     ]
   },
   {
     "model": "nousresearch/deephermes-3-mistral-24b-preview",
     "labels": [
-      "general_assistant",
-      "paid",
-      "experimental",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-medium-3",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "vision_expert"
     ]
   },
   {
     "model": "google/gemini-2.5-pro-preview-05-06",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "fast_response",
-      "experimental",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "arcee-ai/spotlight",
     "labels": [
-      "general_assistant",
-      "paid",
+      "reasoning_expert",
       "vision_expert"
     ]
   },
   {
     "model": "arcee-ai/maestro-reasoning",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
+      "math_expert",
       "reasoning_expert"
     ]
   },
   {
     "model": "arcee-ai/virtuoso-large",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "arcee-ai/coder-large",
     "labels": [
-      "general_assistant",
-      "paid",
       "code_expert"
     ]
   },
   {
     "model": "microsoft/phi-4-reasoning-plus",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "inception/mercury-coder",
     "labels": [
-      "general_assistant",
-      "paid",
       "code_expert"
     ]
   },
   {
     "model": "qwen/qwen3-4b:free",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "free"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "deepseek/deepseek-prover-v2",
     "labels": [
-      "general_assistant",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "meta-llama/llama-guard-4-12b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "vision_expert"
     ]
   },
   {
     "model": "qwen/qwen3-30b-a3b:free",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "free"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-30b-a3b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-8b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-14b:free",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "free"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-14b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-32b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-235b-a22b:free",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "free",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen3-235b-a22b",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "tngtech/deepseek-r1t-chimera:free",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "free"
+      "general_assistant"
     ]
   },
   {
     "model": "tngtech/deepseek-r1t-chimera",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "microsoft/mai-ds-r1:free",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "free"
+      "general_assistant"
     ]
   },
   {
     "model": "microsoft/mai-ds-r1",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/o4-mini-high",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/o3",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
+      "math_expert",
+      "reasoning_expert",
       "vision_expert",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "openai/o4-mini",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "fast_response",
-      "paid"
+      "math_expert",
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen2.5-coder-7b-instruct",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
       "code_expert",
-      "instruction_following",
-      "paid"
+      "reasoning_expert"
     ]
   },
   {
     "model": "openai/gpt-4.1",
     "labels": [
-      "general_assistant",
-      "paid",
-      "math_expert",
-      "reasoning_expert"
+      "code_expert",
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4.1-mini",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "reasoning_expert",
-      "fast_response",
-      "paid",
-      "math_expert"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4.1-nano",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "eleutherai/llemma_7b",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
       "math_expert",
-      "code_expert"
+      "reasoning_expert"
     ]
   },
   {
     "model": "alfredpros/codellama-7b-instruct-solidity",
     "labels": [
-      "general_assistant",
-      "paid",
-      "code_expert",
-      "instruction_following"
+      "code_expert"
     ]
   },
   {
     "model": "arliai/qwq-32b-arliai-rpr-v1:free",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "free"
+      "creative_writer"
     ]
   },
   {
     "model": "arliai/qwq-32b-arliai-rpr-v1",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "creative_writer"
     ]
   },
   {
     "model": "x-ai/grok-3-mini-beta",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
-      "experimental"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "x-ai/grok-3-beta",
     "labels": [
-      "general_assistant",
-      "paid",
-      "experimental",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "nvidia/llama-3.1-nemotron-ultra-253b-v1",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-4-maverick",
     "labels": [
-      "general_assistant",
-      "paid",
       "code_expert",
-      "vision_expert"
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-4-scout",
     "labels": [
-      "general_assistant",
-      "paid",
       "code_expert",
-      "vision_expert"
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen2.5-vl-32b-instruct:free",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "vision_expert",
-      "instruction_following",
-      "free",
-      "math_expert"
+      "vision_expert"
     ]
   },
   {
     "model": "qwen/qwen2.5-vl-32b-instruct",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "vision_expert",
-      "instruction_following",
-      "paid",
-      "math_expert"
+      "vision_expert"
     ]
   },
   {
     "model": "deepseek/deepseek-chat-v3-0324:free",
     "labels": [
-      "general_assistant",
-      "conversationalist",
-      "free"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "deepseek/deepseek-chat-v3-0324",
     "labels": [
-      "general_assistant",
-      "paid",
-      "conversationalist"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/o1-pro",
     "labels": [
-      "general_assistant",
-      "paid",
+      "code_expert",
       "math_expert",
       "reasoning_expert"
     ]
@@ -1701,1237 +1501,1187 @@
   {
     "model": "mistralai/mistral-small-3.1-24b-instruct:free",
     "labels": [
-      "general_assistant",
-      "fast_response",
-      "free",
-      "instruction_following"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "vision_expert"
     ]
   },
   {
     "model": "mistralai/mistral-small-3.1-24b-instruct",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response",
-      "instruction_following"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "vision_expert"
     ]
   },
   {
     "model": "allenai/olmo-2-0325-32b-instruct",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "instruction_following",
-      "paid",
-      "math_expert"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "google/gemma-3-4b-it:free",
     "labels": [
-      "general_assistant",
+      "math_expert",
       "reasoning_expert",
-      "vision_expert",
-      "free",
-      "math_expert"
+      "vision_expert"
     ]
   },
   {
     "model": "google/gemma-3-4b-it",
     "labels": [
-      "general_assistant",
+      "math_expert",
       "reasoning_expert",
       "vision_expert",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemma-3-12b-it:free",
     "labels": [
-      "general_assistant",
+      "math_expert",
       "reasoning_expert",
       "vision_expert",
-      "free",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemma-3-12b-it",
     "labels": [
-      "general_assistant",
+      "math_expert",
       "reasoning_expert",
       "vision_expert",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "cohere/command-a",
     "labels": [
-      "general_assistant",
-      "paid",
-      "code_expert"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4o-mini-search-preview",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "fast_response",
-      "paid",
-      "math_expert",
-      "experimental"
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4o-search-preview",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "paid",
-      "math_expert",
-      "experimental"
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemma-3-27b-it:free",
     "labels": [
-      "general_assistant",
+      "math_expert",
       "reasoning_expert",
       "vision_expert",
-      "free",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemma-3-27b-it",
     "labels": [
-      "general_assistant",
+      "math_expert",
       "reasoning_expert",
       "vision_expert",
-      "paid",
-      "math_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "thedrummer/skyfall-36b-v2",
     "labels": [
-      "general_assistant",
-      "paid"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "microsoft/phi-4-multimodal-instruct",
     "labels": [
-      "general_assistant",
+      "math_expert",
       "reasoning_expert",
       "vision_expert",
-      "instruction_following",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "perplexity/sonar-reasoning-pro",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "perplexity/sonar-pro",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "perplexity/sonar-deep-research",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwq-32b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "reasoning_expert"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemini-2.0-flash-lite-001",
     "labels": [
-      "fast_response",
-      "general_assistant",
-      "math_expert",
       "reasoning_expert",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "anthropic/claude-3.7-sonnet:thinking",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "anthropic/claude-3.7-sonnet",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-saba",
     "labels": [
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-guard-3-8b",
     "labels": [
-      "instruction_following",
-      "safety_focused",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "openai/o3-mini-high",
     "labels": [
-      "general_assistant",
-      "paid",
-      "math_expert",
       "code_expert",
-      "reasoning_expert"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemini-2.0-flash-001",
     "labels": [
-      "general_assistant",
-      "fast_response",
-      "math_expert",
       "code_expert",
-      "paid"
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen-vl-plus",
     "labels": [
-      "general_assistant",
-      "paid",
+      "reasoning_expert",
       "vision_expert"
     ]
   },
   {
     "model": "aion-labs/aion-1.0",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "aion-labs/aion-1.0-mini",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "aion-labs/aion-rp-llama-3.1-8b",
     "labels": [
-      "general_assistant",
-      "role_playing",
-      "paid"
+      "creative_writer"
     ]
   },
   {
     "model": "qwen/qwen-vl-max",
     "labels": [
-      "general_assistant",
-      "paid",
-      "vision_expert"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen-turbo",
     "labels": [
-      "general_assistant",
-      "conversationalist",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen2.5-vl-72b-instruct",
     "labels": [
-      "paid",
-      "general_assistant",
-      "vision_expert",
       "reasoning_expert",
-      "instruction_following"
+      "vision_expert"
     ]
   },
   {
     "model": "qwen/qwen-plus",
     "labels": [
-      "general_assistant",
-      "conversationalist",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen-max",
     "labels": [
-      "general_assistant",
-      "conversationalist",
-      "reasoning_expert",
-      "math_expert",
       "code_expert",
-      "paid"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/o3-mini",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "mistralai/mistral-small-24b-instruct-2501:free",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-small-24b-instruct-2501",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "deepseek/deepseek-r1-distill-qwen-32b",
     "labels": [
-      "general_assistant",
       "code_expert",
-      "paid"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "deepseek/deepseek-r1-distill-qwen-14b",
     "labels": [
-      "general_assistant",
       "code_expert",
-      "paid"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "perplexity/sonar-reasoning",
     "labels": [
       "reasoning_expert",
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "perplexity/sonar",
     "labels": [
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "deepseek/deepseek-r1-distill-llama-70b:free",
     "labels": [
-      "general_assistant",
       "code_expert",
-      "free"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "deepseek/deepseek-r1-distill-llama-70b",
     "labels": [
-      "general_assistant",
       "code_expert",
-      "paid"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "deepseek/deepseek-r1:free",
     "labels": [
-      "general_assistant",
-      "free"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "deepseek/deepseek-r1",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "minimax/minimax-01",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/codestral-2501",
     "labels": [
       "code_expert",
-      "paid"
+      "reasoning_expert"
     ]
   },
   {
     "model": "microsoft/phi-4",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "sao10k/l3.1-70b-hanami-x1",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "creative_writer"
     ]
   },
   {
     "model": "deepseek/deepseek-chat",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "sao10k/l3.3-euryale-70b",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "creative_writer"
     ]
   },
   {
     "model": "openai/o1",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "math_expert",
       "code_expert",
-      "paid"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "cohere/command-r7b-12-2024",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "conversationalist",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemini-2.0-flash-exp:free",
     "labels": [
-      "general_assistant",
-      "fast_response",
-      "experimental",
-      "math_expert",
       "code_expert",
-      "free"
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-3.3-70b-instruct:free",
     "labels": [
-      "vision_expert",
-      "instruction_following",
-      "general_assistant",
-      "free"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-3.3-70b-instruct",
     "labels": [
-      "vision_expert",
-      "instruction_following",
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "amazon/nova-lite-v1",
     "labels": [
-      "general_assistant",
-      "paid"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "amazon/nova-micro-v1",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "amazon/nova-pro-v1",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "math_expert",
-      "code_expert",
-      "paid"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4o-2024-11-20",
     "labels": [
-      "general_assistant",
-      "multimodal",
-      "reasoning_expert",
       "code_expert",
-      "math_expert",
-      "paid"
+      "reasoning_expert",
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-large-2411",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "multilingual",
-      "math_expert",
       "code_expert",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-large-2407",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "multilingual",
-      "math_expert",
       "code_expert",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/pixtral-large-2411",
     "labels": [
+      "reasoning_expert",
       "vision_expert",
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen-2.5-coder-32b-instruct:free",
     "labels": [
       "code_expert",
-      "general_assistant",
-      "instruction_following",
-      "free"
+      "math_expert",
+      "reasoning_expert"
     ]
   },
   {
     "model": "qwen/qwen-2.5-coder-32b-instruct",
     "labels": [
       "code_expert",
-      "instruction_following",
-      "paid"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "raifle/sorcererlm-8x22b",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "paid"
+      "creative_writer"
     ]
   },
   {
     "model": "thedrummer/unslopnemo-12b",
     "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
-    "model": "anthropic/claude-3.5-haiku-20241022",
-    "labels": [
-      "fast_response",
-      "general_assistant",
-      "math_expert",
-      "reasoning_expert",
-      "paid"
+      "creative_writer"
     ]
   },
   {
     "model": "anthropic/claude-3.5-haiku",
     "labels": [
-      "general_assistant",
-      "fast_response",
-      "paid"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
-    "model": "anthropic/claude-3.5-sonnet",
+    "model": "anthropic/claude-3.5-haiku-20241022",
     "labels": [
-      "general_assistant",
-      "reasoning_expert",
-      "math_expert",
       "code_expert",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "anthracite-org/magnum-v4-72b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "anthropic/claude-3.5-sonnet",
+    "labels": [
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/ministral-8b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/ministral-3b",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen-2.5-7b-instruct",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "nvidia/llama-3.1-nemotron-70b-instruct",
     "labels": [
-      "instruction_following",
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "inflection/inflection-3-pi",
     "labels": [
-      "conversationalist",
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "inflection/inflection-3-productivity",
     "labels": [
-      "general_assistant",
-      "productivity_focused",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "thedrummer/rocinante-12b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "creative_writer"
     ]
   },
   {
     "model": "meta-llama/llama-3.2-90b-vision-instruct",
     "labels": [
-      "instruction_following",
-      "vision_expert",
-      "general_assistant",
       "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3.2-11b-vision-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid",
-      "vision_expert"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-3.2-1b-instruct",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3.2-11b-vision-instruct",
+    "labels": [
+      "reasoning_expert",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-3.2-3b-instruct:free",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "free",
-      "instruction_following"
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-3.2-3b-instruct",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen-2.5-72b-instruct:free",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "free",
-      "instruction_following"
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen-2.5-72b-instruct",
     "labels": [
-      "instruction_following",
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "neversleep/llama-3.1-lumimaid-8b",
     "labels": [
-      "general_assistant",
-      "instruction_following",
       "creative_writer",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/pixtral-12b",
     "labels": [
-      "vision_expert",
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
-    "model": "cohere/command-r-plus-08-2024",
-    "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "instruction_following",
-      "conversationalist",
-      "math_expert",
-      "code_expert",
-      "paid"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "cohere/command-r-08-2024",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "conversationalist",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "cohere/command-r-plus-08-2024",
+    "labels": [
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "sao10k/l3.1-euryale-70b",
     "labels": [
-      "general_assistant",
-      "math_expert",
-      "reasoning_expert",
-      "paid"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "qwen/qwen-2.5-vl-7b-instruct",
     "labels": [
-      "general_assistant",
-      "paid",
+      "reasoning_expert",
       "vision_expert",
-      "instruction_following"
+      "general_assistant"
     ]
   },
   {
     "model": "microsoft/phi-3.5-mini-128k-instruct",
     "labels": [
-      "instruction_following",
-      "general_assistant",
       "code_expert",
-      "paid"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "nousresearch/hermes-3-llama-3.1-70b",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "reasoning_expert",
-      "paid"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "nousresearch/hermes-3-llama-3.1-405b:free",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "free"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "nousresearch/hermes-3-llama-3.1-405b",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "paid"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/chatgpt-4o-latest",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "sao10k/l3-lunaris-8b",
     "labels": [
-      "general_assistant",
-      "math_expert",
       "reasoning_expert",
-      "paid"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4o-2024-08-06",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-3.1-405b",
     "labels": [
-      "general_assistant",
+      "code_expert",
+      "math_expert",
       "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3.1-405b-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid",
-      "reasoning_expert"
-    ]
-  },
-  {
-    "model": "meta-llama/llama-3.1-70b-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid",
-      "reasoning_expert"
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-3.1-8b-instruct",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3.1-405b-instruct",
+    "labels": [
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3.1-70b-instruct",
+    "labels": [
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-nemo:free",
     "labels": [
-      "general_assistant",
-      "free"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-nemo",
     "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
-    "model": "openai/gpt-4o-mini-2024-07-18",
-    "labels": [
-      "fast_response",
-      "general_assistant",
-      "math_expert",
+      "code_expert",
       "reasoning_expert",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4o-mini",
     "labels": [
-      "general_assistant",
-      "math_expert",
       "code_expert",
-      "paid"
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "openai/gpt-4o-mini-2024-07-18",
+    "labels": [
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemma-2-27b-it",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "google/gemma-2-9b-it",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "sao10k/l3-euryale-70b",
     "labels": [
-      "general_assistant",
-      "math_expert",
-      "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "mistralai/mistral-7b-instruct:free",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "free"
-    ]
-  },
-  {
-    "model": "mistralai/mistral-7b-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-7b-instruct-v0.3",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "nousresearch/hermes-2-pro-llama-3-8b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "mistralai/mistral-7b-instruct:free",
+    "labels": [
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "mistralai/mistral-7b-instruct",
+    "labels": [
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "microsoft/phi-3-mini-128k-instruct",
     "labels": [
-      "instruction_following",
-      "general_assistant",
       "code_expert",
-      "paid"
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "microsoft/phi-3-medium-128k-instruct",
     "labels": [
-      "instruction_following",
-      "general_assistant",
       "code_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "openai/gpt-4o-2024-05-13",
-    "labels": [
-      "general_assistant",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4o",
     "labels": [
-      "general_assistant",
-      "multimodal",
-      "reasoning_expert",
-      "math_expert",
       "code_expert",
-      "paid"
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4o:extended",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-guard-2-8b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
-    "model": "meta-llama/llama-3-70b-instruct",
+    "model": "openai/gpt-4o-2024-05-13",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid",
-      "reasoning_expert"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "meta-llama/llama-3-8b-instruct",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "meta-llama/llama-3-70b-instruct",
+    "labels": [
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mixtral-8x22b-instruct",
     "labels": [
-      "instruction_following",
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "microsoft/wizardlm-2-8x22b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4-turbo",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "anthropic/claude-3-haiku",
     "labels": [
-      "fast_response",
-      "general_assistant",
-      "math_expert",
+      "code_expert",
       "reasoning_expert",
-      "paid"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "anthropic/claude-3-opus",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-large",
     "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
-    "model": "openai/gpt-3.5-turbo-0613",
-    "labels": [
-      "general_assistant",
-      "paid"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4-turbo-preview",
     "labels": [
-      "experimental",
-      "general_assistant",
-      "math_expert",
+      "code_expert",
       "reasoning_expert",
-      "paid"
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "openai/gpt-3.5-turbo-0613",
+    "labels": [
+      "code_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-small",
     "labels": [
-      "general_assistant",
-      "paid",
-      "fast_response"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-tiny",
     "labels": [
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-7b-instruct-v0.2",
     "labels": [
-      "general_assistant",
-      "paid",
-      "instruction_following"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mixtral-8x7b-instruct",
     "labels": [
-      "instruction_following",
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "neversleep/noromaid-20b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "alpindale/goliath-120b",
     "labels": [
-      "general_assistant",
       "reasoning_expert",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "openrouter/auto",
     "labels": [
-      "general_assistant",
-      "free"
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4-1106-preview",
     "labels": [
-      "experimental",
-      "general_assistant",
-      "math_expert",
+      "code_expert",
       "reasoning_expert",
-      "paid"
-    ]
-  },
-  {
-    "model": "openai/gpt-3.5-turbo-instruct",
-    "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "vision_expert",
+      "general_assistant"
     ]
   },
   {
     "model": "mistralai/mistral-7b-instruct-v0.1",
     "labels": [
-      "general_assistant",
-      "instruction_following",
-      "paid"
+      "code_expert",
+      "reasoning_expert",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "openai/gpt-3.5-turbo-instruct",
+    "labels": [
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-3.5-turbo-16k",
     "labels": [
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "mancer/weaver",
     "labels": [
-      "general_assistant",
-      "paid"
+      "creative_writer"
     ]
   },
   {
     "model": "undi95/remm-slerp-l2-13b",
     "labels": [
-      "general_assistant",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "gryphe/mythomax-l2-13b",
     "labels": [
-      "general_assistant",
-      "paid"
-    ]
-  },
-  {
-    "model": "openai/gpt-3.5-turbo",
-    "labels": [
-      "general_assistant",
-      "paid"
+      "creative_writer",
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4-0314",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "general_assistant"
     ]
   },
   {
     "model": "openai/gpt-4",
     "labels": [
-      "general_assistant",
+      "code_expert",
       "math_expert",
       "reasoning_expert",
-      "paid"
+      "creative_writer",
+      "vision_expert",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "openai/gpt-3.5-turbo",
+    "labels": [
+      "code_expert",
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
     ]
   }
 ]

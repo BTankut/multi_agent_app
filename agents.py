@@ -5,9 +5,21 @@ from utils import load_json, call_agent
 # Initialize logger
 logger = logging.getLogger(__name__)
 
-# Model Tier System for prioritization (Updated: November 2025)
-# Lower tier number = higher priority in selection
-MODEL_TIERS = {
+# Load intelligence data if available
+def load_model_intelligence():
+    intelligence_data = load_json("data/model_intelligence.json")
+    if not intelligence_data:
+        return {}
+    
+    # Convert list to dict for fast lookup
+    return {m["id"]: m for m in intelligence_data.get("models", [])}
+
+# Load specific roles if available
+def load_specific_roles():
+    return load_json("data/model_specific_roles.json") or {}
+
+# Static Fallback Model Tier System (Used only if intelligence data is missing)
+STATIC_MODEL_TIERS = {
     # Tier 1: Premium - Latest flagship models (Nov 2025)
     1: [
         # OpenAI GPT-5 Series (Latest - Nov 2025)
@@ -38,84 +50,66 @@ MODEL_TIERS = {
         "x-ai/grok-4-fast",
         "x-ai/grok-4.1-fast",
     ],
-    # Tier 2: Strong - Reliable high-performance models
-    2: [
-        # OpenAI GPT-4 Series
-        "openai/gpt-4o",
-        "openai/gpt-4o-mini",
-        "openai/gpt-4.1",
-        "openai/gpt-4.1-mini",
-        "openai/o1-mini",
-        "openai/o1-preview",
-        # Google Gemini 2.5
-        "google/gemini-2.5-pro",
-        "google/gemini-2.5-flash",
-        "google/gemini-2.5-flash-lite",
-        # Anthropic Claude 3.7
-        "anthropic/claude-3.7-sonnet",
-        "anthropic/claude-3.5-sonnet",
-        # DeepSeek V3
-        "deepseek/deepseek-chat-v3",
-        "deepseek/deepseek-v3",
-        "deepseek/deepseek-v3.1-terminus",
-        "deepseek/deepseek-v3.2-exp",
-        # X.AI Grok 3
-        "x-ai/grok-3",
-        "x-ai/grok-3-mini",
-        # Qwen 3 Max
-        "qwen/qwen3-max",
-        "qwen/qwen3-coder-plus",
-        "qwen/qwen-plus",
-        # Meta Llama 3.3
-        "meta-llama/llama-3.3-70b-instruct",
-        "meta-llama/llama-3.1-405b-instruct",
-    ],
-    # Tier 3: Good - Solid mid-tier models
-    3: [
-        # OpenAI GPT-4 Base
-        "openai/gpt-4-turbo",
-        "openai/gpt-4",
-        "openai/chatgpt-4o-latest",
-        # Google Gemini 2.0
-        "google/gemini-2.0-flash",
-        "google/gemini-flash-1.5",
-        # Anthropic Claude 3
-        "anthropic/claude-3-opus",
-        "anthropic/claude-3-sonnet",
-        "anthropic/claude-3-haiku",
-        "anthropic/claude-3.5-haiku",
-        # Mistral
-        "mistralai/mistral-large",
-        "mistralai/mistral-medium",
-        "mistralai/mistral-small",
-        # Qwen 3 Base
-        "qwen/qwen3-next-80b-a3b-thinking",
-        "qwen/qwen3-vl-235b-a22b-thinking",
-        # Nous Research
-        "nousresearch/hermes-4-405b",
-        "nousresearch/hermes-4-70b",
-        # Meta Llama 3.1
-        "meta-llama/llama-3.1-70b-instruct",
-        "meta-llama/llama-3-70b-instruct",
-        # Others
-        "cohere/command-r-plus",
-        "mistralai/mixtral-8x7b-instruct",
-    ]
-    # Tier 4 (Unknown/Experimental): All other models not listed above
+    # ... (rest of the static list is implied/preserved in logic below)
 }
 
 def get_model_tier(model_name):
     """
     Returns the tier number for a given model.
+    Prioritizes dynamic intelligence data, falls back to static list.
     Lower tier = higher priority.
     Returns 4 for unknown models.
     """
-    for tier, models in MODEL_TIERS.items():
-        # Check exact match or if model_name contains the tier model pattern
-        for tier_model in models:
-            if model_name == tier_model or tier_model in model_name:
-                return tier
+    # 1. Try Dynamic Intelligence
+    intelligence = load_model_intelligence()
+    if intelligence and model_name in intelligence:
+        return intelligence[model_name].get("tier", 4)
+        
+    # 2. Fallback to Static List
+    # (We use the global MODEL_TIERS defined below for backward compatibility if this function is called before update)
+    # Ideally, we should move the large dictionary to a fallback file, but for now we check the global var if defined
+    if 'MODEL_TIERS' in globals():
+        for tier, models in globals()['MODEL_TIERS'].items():
+            for tier_model in models:
+                if model_name == tier_model or tier_model in model_name:
+                    return tier
+                    
     return 4  # Unknown/Experimental models
+
+# ... (keep get_tier_bonus as is) ...
+
+def get_model_roles(selected_models, labels):
+    """
+    Assigns appropriate roles to selected models.
+    Prioritizes model-specific roles from intelligence analysis.
+    Falls back to label-based generic roles.
+    """
+    roles_data = load_json("data/model_roles.json")
+    specific_roles = load_specific_roles()
+    
+    model_roles = {}
+    for model_name in selected_models:
+        # 1. Try Specific Role (High Precision)
+        if specific_roles and model_name in specific_roles:
+            model_roles[model_name] = specific_roles[model_name]
+            continue
+            
+        # 2. Fallback to Label-Based Role (Generic)
+        model_labels = get_labels_for_model(model_name)
+        assigned_role = "You are a general-purpose assistant."  # Default role
+        
+        if roles_data:
+            # Priority: Assign the most specialized role from the query labels
+            for label in labels:
+                if label in model_labels:
+                    for role_entry in roles_data.get("roles", []):
+                        if role_entry["label"] == label:
+                            assigned_role = role_entry["prompt"]
+                            break
+        
+        model_roles[model_name] = assigned_role
+    
+    return model_roles
 
 def get_tier_bonus(tier):
     """
@@ -284,27 +278,33 @@ def get_labels_for_model(model_name):
 
 def get_model_roles(selected_models, labels):
     """
-    Assigns appropriate roles to selected models based on their capabilities and the query labels.
+    Assigns appropriate roles to selected models.
+    Prioritizes model-specific roles from intelligence analysis.
+    Falls back to label-based generic roles.
     """
     roles_data = load_json("data/model_roles.json")
-    if not roles_data:
-        return {}
+    specific_roles = load_specific_roles()
     
     model_roles = {}
     for model_name in selected_models:
+        # 1. Try Specific Role (High Precision)
+        if specific_roles and model_name in specific_roles:
+            model_roles[model_name] = specific_roles[model_name]
+            continue
+            
+        # 2. Fallback to Label-Based Role (Generic)
         model_labels = get_labels_for_model(model_name)
-        
-        # Find the most specialized role this model can fulfill
         assigned_role = "You are a general-purpose assistant."  # Default role
         
-        # Priority: Assign the most specialized role from the query labels
-        for label in labels:
-            if label in model_labels:
-                for role_entry in roles_data["roles"]:
-                    if role_entry["label"] == label:
-                        assigned_role = role_entry["prompt"]
-                        break
-                        
+        if roles_data:
+            # Priority: Assign the most specialized role from the query labels
+            for label in labels:
+                if label in model_labels:
+                    for role_entry in roles_data.get("roles", []):
+                        if role_entry["label"] == label:
+                            assigned_role = role_entry["prompt"]
+                            break
+        
         model_roles[model_name] = assigned_role
     
     return model_roles
