@@ -1,6 +1,6 @@
 # 🧠 Multi-Agent AI Orchestrator
 
-![Multi-Agent Orchestrator Banner](assets/banner_v2.png)
+![Multi-Agent Orchestrator Banner](assets/banner_v3.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -13,24 +13,21 @@
 
 The Multi-Agent AI Orchestrator is a next-generation system that solves complex problems not by relying on a single AI model, but by distributing the task to a **specialized team of agents**.
 
-This project goes beyond simple routing. It features an **"AI-Powered Intelligence System"** that autonomously analyzes, categorizes, and ranks hundreds of available AI models using advanced agents (like Grok 4.1) to ensure the perfect team is assembled for every query.
+Acting like a project manager, the **"Coordinator Agent"** analyzes your query, determines the necessary skills (Math, Coding, Creative Writing, Logic, etc.), and assembles the **optimal team** from hundreds of models available via OpenRouter.
 
-![App Screenshot](assets/screenshot.png)
+You simply ask your question; in the background, a massive network of intelligence works, debates, and synthesizes the most accurate result for you.
 
 ## ✨ Key Features
 
 *   **🎭 Dynamic Role Assignment:** Roles such as "Code Expert", "Mathematician", or "Storyteller" are created instantly based on your query.
 *   **🚀 Real-Time Visualization:** Watch how the system thinks, which agents it selects, and their working status on a live, animated network graph.
-*   **⚡ Event-Driven Architecture:** Built on FastAPI and WebSockets for true real-time interaction and visualization.
-*   **🧠 AI-Powered Intelligence:** Automatically analyzes and labels new models using a specialized AI analyst agent.
-*   **💾 Smart Caching:** Intelligent local caching for instant startup and minimal API overhead.
 *   **🧠 Smart Coordinator:** An intelligent manager that knows which model performs which task better and more cost-effectively.
 *   **⚡ Speed & Efficiency:** Uses a single agent for simple queries ("Hello") to save resources, while calling upon the entire fleet for complex projects.
 *   **🎨 Modern Interface:** A dark-mode supported, sleek, and user-friendly experience designed to minimize eye strain.
 
 ## 🛠️ How It Works
 
-![System Architecture](assets/architecture_v3.png)
+![System Architecture](assets/architecture_v4.png)
 
 1.  **Analysis:** The Coordinator model understands your query and determines the required skill tags.
 2.  **Team Assembly:** Models best suited for the determined tags (OpenAI, Anthropic, Google, Meta, etc.) are selected from the pool.
