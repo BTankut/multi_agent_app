@@ -962,10 +962,17 @@ STRATEGY:
         # Store usage data in session state
         if hasattr(state, 'usage_data'):
             state.usage_data = usage_data
-            
-        return final_answer, updated_agent_history
-    
-    return "No responses were received from the agents.", updated_agent_history
+
+        return final_answer, updated_agent_history, usage_data
+
+    # Default usage_data for error case
+    empty_usage_data = {
+        "total_tokens": 0,
+        "total_cost": 0.0,
+        "total_time": 0.0,
+        "models": {}
+    }
+    return "No responses were received from the agents.", updated_agent_history, empty_usage_data
 
 def process_query(query, coordinator_model, option, openrouter_models, coordinator_history=None, agent_history=None, reasoning_mode=None):
     """
@@ -998,7 +1005,10 @@ def process_query(query, coordinator_model, option, openrouter_models, coordinat
     # Track if the coordinator model encounters any errors
     coordinator_error_encountered = False
     error_message = None
-    
+
+    # Initialize default usage_data (will be overwritten by coordinate_agents on success)
+    usage_data = {"total_tokens": 0, "total_cost": 0.0, "total_time": 0.0, "models": {}}
+
     try:
         # Step 1: Determine appropriate labels for the query
         labels = determine_query_labels(query, coordinator_model, openrouter_models, 
@@ -1012,7 +1022,7 @@ def process_query(query, coordinator_model, option, openrouter_models, coordinat
         logger.info(f"Query labels: {labels}")
         
         # Step 2: Coordinate the agents to generate a response
-        final_answer, updated_agent_history = coordinate_agents(
+        final_answer, updated_agent_history, usage_data = coordinate_agents(
             query, coordinator_model, labels, openrouter_models, option,
             agent_history=agent_history,
             reasoning_mode=reasoning_mode
@@ -1039,13 +1049,15 @@ def process_query(query, coordinator_model, option, openrouter_models, coordinat
             labels = ["general_assistant"]
             final_answer = f"An unexpected error occurred: {str(e)}"
             updated_agent_history = agent_history.copy() if agent_history else {}
-    
+            usage_data = {"total_tokens": 0, "total_cost": 0.0, "total_time": 0.0, "models": {}}
+
     except Exception as e:
         # Handle other unexpected errors
         logger.error(f"Unexpected error in process_query: {str(e)}")
         labels = ["general_assistant"]
         final_answer = f"An unexpected error occurred: {str(e)}"
         updated_agent_history = agent_history.copy() if agent_history else {}
+        usage_data = {"total_tokens": 0, "total_cost": 0.0, "total_time": 0.0, "models": {}}
     
     # If there was a coordinator error, don't update the histories
     # and just return the error message, keeping previous history intact
