@@ -111,6 +111,10 @@ class WebSocketLogHandler(logging.Handler):
 async def get():
     return FileResponse(str(static_path / "index.html"))
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
 # Global Cache
 GLOBAL_CACHE = {
     "models": [],
