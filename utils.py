@@ -439,12 +439,16 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                 request_payload["include_reasoning"] = True
                 logger.info(f"Using reasoning mode (include_reasoning=True) for model: {model_name}")
 
+            # Determine timeout - longer for reasoning/thinking models
+            is_thinking_model = any(ind in model_name.lower() for ind in ["thinking", "o1", "o3", "r1", "reasoner"])
+            api_timeout = 180 if is_thinking_model else 60
+
             # Make API request
             response = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers=headers,
                 json=request_payload,
-                timeout=45
+                timeout=api_timeout
             )
 
             # If 400 error and reasoning was enabled via parameter, retry without it
@@ -456,7 +460,7 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers=headers,
                     json=request_payload,
-                    timeout=45
+                    timeout=api_timeout
                 )
 
             completion_time = time.time() - start_time

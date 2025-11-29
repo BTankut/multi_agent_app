@@ -389,6 +389,29 @@
                     </div>
                 </div>
 
+                <!-- Query Metrics -->
+                <div v-if="lastQueryMetrics" class="pt-4 border-t border-cyan-500/20">
+                    <label class="block font-orbitron text-[10px] tracking-[0.2em] text-cyan-400/70 mb-3">LAST_QUERY_METRICS</label>
+                    <div class="space-y-2 font-mono text-[11px]">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">DURATION</span>
+                            <span class="text-cyan-400">{{ lastQueryMetrics.query_duration }}s</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">TOKENS</span>
+                            <span class="text-cyan-400">{{ lastQueryMetrics.total_tokens.toLocaleString() }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">COST</span>
+                            <span class="text-green-400">${{ lastQueryMetrics.total_cost.toFixed(6) }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-500">AGENTS</span>
+                            <span class="text-magenta-400" style="color: #ff00ff;">{{ lastQueryMetrics.models_used }}</span>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Actions -->
                 <div class="pt-4 border-t border-cyan-500/20 space-y-3">
                     <button @click="fetchModels(true)" class="cyber-btn w-full py-3 text-xs flex items-center justify-center gap-2">
@@ -429,7 +452,7 @@
                             <div class="flex items-center gap-2 mt-1">
                                 <div :class="isConnected ? 'status-online' : 'w-2 h-2 bg-red-500 rounded-full'"></div>
                                 <span class="font-mono text-[10px] tracking-wider" :class="isConnected ? 'text-green-400' : 'text-red-400'">
-                                    {{ isConnected ? 'NEURAL_LINK::ACTIVE' : 'CONNECTION::LOST' }}
+                                    {{ isConnected ? 'LINK:ACTIVE' : 'LINK:LOST' }}
                                 </span>
                             </div>
                         </div>
@@ -581,6 +604,7 @@
                 const queryInput = ref("");
                 const messages = ref([]);
                 const activeAgents = ref([]);
+                const lastQueryMetrics = ref(null);
                 const msgContainer = ref(null);
                 const textareaRef = ref(null);
                 const rawModels = ref([]);
@@ -634,6 +658,10 @@
                             isProcessing.value = false;
                             activeAgents.value.forEach(a => a.status = 'done');
                             messages.value.push({ role: 'assistant', content: msg.data.answer, details: { labels: msg.data.labels }});
+                            // Store metrics from the query
+                            if (msg.data.metrics) {
+                                lastQueryMetrics.value = msg.data.metrics;
+                            }
                             scrollToBottom();
                             break;
                         case 'error':
@@ -712,7 +740,7 @@
                 return {
                     sidebarOpen, modelsLoading, modelsLastUpdated, settings, modelSearch, showModelDropdown,
                     coordinatorModels, filteredCoordinatorModels, selectCoordinator,
-                    isConnected, isProcessing, queryInput, messages, activeAgents,
+                    isConnected, isProcessing, queryInput, messages, activeAgents, lastQueryMetrics,
                     msgContainer, textareaRef, sendQuery, stopProcessing, clearChat,
                     adjustHeight, getAgentIcon, renderMarkdown, fetchModels
                 };

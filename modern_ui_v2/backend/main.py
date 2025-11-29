@@ -3,6 +3,7 @@ import os
 import json
 import asyncio
 import logging
+import time
 from pathlib import Path
 from typing import List, Dict, Any
 
@@ -263,17 +264,20 @@ async def websocket_endpoint(websocket: WebSocket):
                 ws_handler.set_coordinator(coordinator_model)
                 
                 await manager.send_json({"type": "status", "data": "started"}, websocket)
-                
+
+                # Track query start time
+                query_start_time = time.time()
+
                 # Run blocking process_query in a separate thread to not block WebSocket loop
                 # and allow logs to stream
                 loop = asyncio.get_event_loop()
-                
+
                 # Wrapper to run sync function
                 def run_process():
                     # Ensure we have models loaded
                     if not GLOBAL_CACHE["models"]:
                         load_models_cache()
-                        
+
                     return process_query(
                         query=query,
                         coordinator_model=coordinator_model,
@@ -281,18 +285,28 @@ async def websocket_endpoint(websocket: WebSocket):
                         reasoning_mode=reasoning_mode,
                         openrouter_models=GLOBAL_CACHE["models"]
                     )
-                
+
                 try:
                     # Execute logic
-                    final_answer, labels, histories = await loop.run_in_executor(None, run_process)
-                    
-                    # Send final result
+                    final_answer, labels, histories, usage_data = await loop.run_in_executor(None, run_process)
+
+                    # Calculate total query duration
+                    query_duration = time.time() - query_start_time
+
+                    # Send final result with metrics
                     await manager.send_json({
                         "type": "result",
                         "data": {
                             "answer": final_answer,
                             "labels": labels,
-                            "history": histories
+                            "history": histories,
+                            "metrics": {
+                                "total_tokens": usage_data.get("total_tokens", 0),
+                                "total_cost": usage_data.get("total_cost", 0.0),
+                                "query_duration": round(query_duration, 2),
+                                "models_used": len(usage_data.get("models", {})),
+                                "model_details": usage_data.get("models", {})
+                            }
                         }
                     }, websocket)
                     

@@ -1050,7 +1050,7 @@ def process_query(query, coordinator_model, option, openrouter_models, coordinat
     # If there was a coordinator error, don't update the histories
     # and just return the error message, keeping previous history intact
     if coordinator_error_encountered:
-        return final_answer, labels, updated_histories
+        return final_answer, labels, updated_histories, usage_data
     
     # A completely fresh approach to conversation history
     # Start with a clean slate but preserve existing history if provided
@@ -1084,5 +1084,5 @@ def process_query(query, coordinator_model, option, openrouter_models, coordinat
     # Update agent history with the new conversation turns
     if agent_history is not None:
         updated_histories['agents'] = updated_agent_history
-    
-    return final_answer, labels, updated_histories
+
+    return final_answer, labels, updated_histories, usage_data
