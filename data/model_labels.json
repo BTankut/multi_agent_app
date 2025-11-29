@@ -2683,5 +2683,30 @@
       "creative_writer",
       "general_assistant"
     ]
+  },
+  {
+    "model": "tngtech/tng-r1t-chimera:free",
+    "labels": [
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "tngtech/tng-r1t-chimera",
+    "labels": [
+      "reasoning_expert",
+      "creative_writer",
+      "general_assistant"
+    ]
+  },
+  {
+    "model": "prime-intellect/intellect-3",
+    "labels": [
+      "code_expert",
+      "math_expert",
+      "reasoning_expert",
+      "general_assistant"
+    ]
   }
 ]

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Model Etiketleri Güncelleme Aracı
-OpenRouter API'den güncel model listesini çekerek model_labels.json dosyasını günceller.
-Mevcut etiketleri korur ve yeni modeller için akıllı etiketleme yapar.
+Model Labels Updater
+Updates model_labels.json by fetching the latest model list from OpenRouter API.
+Preserves existing labels and applies smart labeling for new models.
 """
 
 import os
@@ -13,7 +13,7 @@ import logging
 import time
 from dotenv import load_dotenv
 
-# Logging ayarları
+# Logging settings
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
@@ -21,39 +21,39 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 
-# Sabit dosya yolları
+# Constants
 MODEL_LABELS_FILE = "data/model_labels.json"
 MODEL_ROLES_FILE = "data/model_roles.json"
 BACKUP_DIR = "data/backups"
 
 def ensure_backup_dir():
-    """Yedekleme dizininin var olduğundan emin olur"""
+    """Ensures backup directory exists"""
     if not os.path.exists(BACKUP_DIR):
         os.makedirs(BACKUP_DIR)
-        logger.info(f"Yedekleme dizini oluşturuldu: {BACKUP_DIR}")
+        logger.info(f"Backup directory created: {BACKUP_DIR}")
 
 def load_json(file_path):
-    """JSON dosyasını yükler"""
+    """Loads JSON file"""
     try:
         with open(file_path, 'r') as file:
             return json.load(file)
     except Exception as e:
-        logger.error(f"Dosya yüklenirken hata: {e}")
+        logger.error(f"Error loading file: {e}")
         return None
 
 def save_json(file_path, data):
-    """JSON verilerini dosyaya kaydeder"""
+    """Saves JSON data to file"""
     try:
         with open(file_path, 'w') as file:
             json.dump(data, file, indent=2)
-        logger.info(f"Dosya başarıyla kaydedildi: {file_path}")
+        logger.info(f"File saved successfully: {file_path}")
         return True
     except Exception as e:
-        logger.error(f"Dosya kaydedilirken hata: {e}")
+        logger.error(f"Error saving file: {e}")
         return False
 
 def backup_file(file_path):
-    """Bir dosyanın zaman damgalı yedeğini oluşturur ve eski yedekleri temizler"""
+    """Creates a timestamped backup of a file and cleans old backups"""
     ensure_backup_dir()
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     filename = os.path.basename(file_path)
@@ -63,42 +63,42 @@ def backup_file(file_path):
         data = load_json(file_path)
         if data:
             save_json(backup_path, data)
-            logger.info(f"Yedek oluşturuldu: {backup_path}")
+            logger.info(f"Backup created: {backup_path}")
             
-            # Eski yedekleri temizle - her dosya türü için en son 5 yedek dışındakileri sil
+            # Clean old backups - keep only last 5 for each file type
             clean_old_backups(filename)
             return True
     except Exception as e:
-        logger.error(f"Yedekleme sırasında hata: {e}")
+        logger.error(f"Error during backup: {e}")
     
     return False
 
 def clean_old_backups(filename_prefix):
-    """Belirli bir türdeki eski yedekleri temizler, sadece en son 5 tanesini tutar"""
+    """Cleans old backups of a specific type, keeping only the last 5"""
     try:
-        # İlgili dosya yedeklerini bul
+        # Find related backup files
         backup_files = []
         for file in os.listdir(BACKUP_DIR):
             if file.startswith(filename_prefix) and file.endswith(".bak"):
                 file_path = os.path.join(BACKUP_DIR, file)
                 backup_files.append((file_path, os.path.getmtime(file_path)))
         
-        # Son değişiklik zamanına göre sırala (en yeni en sonda)
+        # Sort by modification time (newest last)
         backup_files.sort(key=lambda x: x[1])
         
-        # En son 5 yedek dışındakileri sil
+        # Delete older than last 5
         if len(backup_files) > 5:
-            for file_path, _ in backup_files[:-5]:  # En eski dosyaları sil
+            for file_path, _ in backup_files[:-5]:
                 os.remove(file_path)
-                logger.info(f"Eski yedek temizlendi: {file_path}")
+                logger.info(f"Old backup cleaned: {file_path}")
             
-            logger.info(f"{len(backup_files)-5} eski yedek temizlendi, {min(5, len(backup_files))} yedek tutuldu")
+            logger.info(f"Cleaned {len(backup_files)-5} old backups, kept {min(5, len(backup_files))} backups")
     except Exception as e:
-        logger.error(f"Eski yedekler temizlenirken hata: {e}")
+        logger.error(f"Error cleaning old backups: {e}")
 
 def get_openrouter_models(min_date=None, sort_by_newest=True):
     """
-    OpenRouter'dan mevcut modelleri çeker ve isteğe bağlı olarak filtreler.
+    Fetches available models from OpenRouter and optionally filters them.
     
     Args:
         min_date: Optional date string in format 'YYYY-MM-DD' to filter models created after this date
@@ -108,7 +108,7 @@ def get_openrouter_models(min_date=None, sort_by_newest=True):
         List of model data dictionaries
     """
     if not OPENROUTER_API_KEY:
-        logger.error("OPENROUTER_API_KEY bulunamadı!")
+        logger.error("OPENROUTER_API_KEY not found!")
         return []
     
     try:
@@ -126,7 +126,7 @@ def get_openrouter_models(min_date=None, sort_by_newest=True):
         response.raise_for_status()
         models_data = response.json().get('data', [])
         
-        logger.info(f"OpenRouter'dan {len(models_data)} model alındı")
+        logger.info(f"Retrieved {len(models_data)} models from OpenRouter")
         
         # Filter by date if min_date is provided
         if min_date:
@@ -150,10 +150,10 @@ def get_openrouter_models(min_date=None, sort_by_newest=True):
                         # If no date information, keep the model (be inclusive)
                         filtered_models.append(model)
                 
-                logger.info(f"Tarih filtresi sonrası {len(filtered_models)} model kaldı ({min_date} tarihinden sonra)")
+                logger.info(f"{len(filtered_models)} models remaining after date filter (after {min_date})")
                 models_data = filtered_models
             except Exception as filter_error:
-                logger.warning(f"Tarih filtreleme hatası: {str(filter_error)}")
+                logger.warning(f"Date filtering error: {str(filter_error)}")
         
         # Sort by newest first if requested
         if sort_by_newest and models_data:
@@ -168,68 +168,68 @@ def get_openrouter_models(min_date=None, sort_by_newest=True):
                 try:
                     # Sort by created_at field (newest first)
                     models_data.sort(key=lambda x: x.get('created_at', ''), reverse=True)
-                    logger.info("Modeller oluşturma tarihine göre sıralandı (en yeniler önce)")
+                    logger.info("Models sorted by creation date (newest first)")
                 except Exception as sort_error:
-                    logger.warning(f"Modelleri tarihe göre sıralarken hata: {str(sort_error)}")
+                    logger.warning(f"Error sorting models by date: {str(sort_error)}")
         
         return models_data
         
     except Exception as e:
-        logger.error(f"OpenRouter'dan model listesi alınırken hata: {e}")
+        logger.error(f"Error fetching model list from OpenRouter: {e}")
         return []
 
 def get_available_labels():
-    """model_roles.json'dan mevcut etiketleri yükler"""
+    """Loads available labels from model_roles.json"""
     roles_data = load_json(MODEL_ROLES_FILE)
     if not roles_data or "labels" not in roles_data:
-        logger.error("Model rolleri yüklenemedi veya 'labels' anahtarı bulunamadı")
+        logger.error("Could not load model roles or 'labels' key not found")
         return []
     
     return [label_entry['label'] for label_entry in roles_data['labels']]
 
 def get_existing_model_labels():
-    """Mevcut model_labels.json'dan model-etiket eşleştirmelerini yükler"""
+    """Loads model-label mappings from existing model_labels.json"""
     model_data = load_json(MODEL_LABELS_FILE)
     if not model_data:
-        logger.error("Model etiketleri yüklenemedi")
+        logger.error("Could not load model labels")
         return {}
     
-    # Model ve etiketlerini sözlük olarak döndür
+    # Return as dictionary of model -> labels
     return {entry.get("model", ""): entry.get("labels", []) for entry in model_data if "model" in entry}
 
 def determine_labels_for_model(model_info, available_labels, existing_labels):
     """
-    Bir model için etiketleri belirler. Önce mevcut etiketleri kullanır, 
-    model yeni ise akıllı etiketleme yapar.
+    Determines labels for a model. Uses existing labels first, 
+    applies smart labeling for new models.
     
-    ÖNEMLİ: Tüm etiketlerin model_roles.json'da tanımlı olduğundan emin olur.
-    Yeni: Modelin OpenRouter sayfasından ek bilgi toplar.
+    IMPORTANT: Ensures all labels are defined in model_roles.json.
+    New: Gathers extra info from model's OpenRouter page.
     """
     model_id = model_info.get('id', '')
     
-    # Eğer model zaten etiketlenmişse, mevcut etiketleri kullan ve doğrula
+    # If model is already labeled, use existing labels and validate
     if model_id in existing_labels:
-        # Mevcut etiketleri available_labels ile filtrele - model_roles.json'da olmayan etiketleri temizle
+        # Filter existing labels with available_labels - clean up labels not in model_roles.json
         valid_labels = [label for label in existing_labels[model_id] if label in available_labels]
         
-        # Eğer hiç geçerli etiket kalmadıysa, yeni etiketler oluştur
+        # If no valid labels remain, create new ones
         if not valid_labels:
-            logger.warning(f"Model {model_id} için hiçbir geçerli etiket bulunamadı, yeniden etiketleniyor.")
+            logger.warning(f"No valid labels found for model {model_id}, re-labeling.")
         else:
-            # En az bir geçerli etiket varsa, onu kullan
+            # If at least one valid label exists, use it
             return valid_labels
     
-    # Yeni model için etiketleri belirle
+    # Determine labels for new model
     labels = []
     
-    # "general_assistant" etiketini kontrol et ve ekle
-    if "general_assistant" in available_labels:  # Her model en az genel asistan olarak işaretlenir
+    # Check and add "general_assistant" label
+    if "general_assistant" in available_labels:  # Every model is marked at least as general assistant
         labels.append("general_assistant")
     
-    # Ücret durumuna göre etiketleme
+    # Label based on pricing
     try:
         prompt_price = model_info.get('pricing', {}).get('prompt', '0')
-        # Sayısal değere dönüştür (string olabilir)
+        # Convert to float
         prompt_price = float(prompt_price) if prompt_price else 0
         
         if prompt_price > 0 and "paid" in available_labels:
@@ -237,11 +237,11 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
         elif "free" in available_labels:
             labels.append("free")
     except (ValueError, TypeError):
-        # Dönüştürme hatası durumunda varsayılan olarak free etiketini ekle (varsa)
+        # Add free label by default on error (if available)
         if "free" in available_labels:
             labels.append("free")
     
-    # Yeni: OpenRouter sayfasından model bilgilerini çek
+    # New: Fetch model info from OpenRouter page
     try:
         from utils import get_model_description
         model_details = get_model_description(model_id)
@@ -249,101 +249,101 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
         if model_details and model_details.get("success", False):
             logger.info(f"Additional info found for model {model_id}: {model_details.get('description', '')}")
             
-            # Model açıklamasından etiketleri çıkart
+            # Extract labels from description
             description = model_details.get("description", "").lower()
             
-            # Akıl yürütme uzmanı için
+            # Reasoning
             if "reasoning" in description:
                 if "reasoning_expert" in available_labels:
                     labels.append("reasoning_expert")
                     
-            # Matematik için
+            # Math
             if "math" in description:
                 if "math_expert" in available_labels:
                     labels.append("math_expert")
                     
-            # Kod uzmanlığı için
+            # Code
             if any(term in description for term in ["code", "coding", "programming"]):
                 if "code_expert" in available_labels:
                     labels.append("code_expert")
                     
-            # Görüntü analizi
+            # Vision
             if any(term in description for term in ["vision", "image", "visual"]):
                 if "vision_expert" in available_labels:
                     labels.append("vision_expert")
     except Exception as e:
         logger.warning(f"Error fetching additional info for model {model_id}: {str(e)}")
     
-    # Model ID'sine göre otomatik etiketleme
+    # Auto-labeling based on Model ID
     model_id_lower = model_id.lower()
     model_name = model_info.get('name', '').lower()
     
-    # Code/Coding uzmanı modelleri
+    # Code/Coding expert models
     if any(term in model_id_lower or term in model_name for term in ["code", "coding", "coder", "codestral", "phi-3", "o3"]) or "claude" in model_id_lower:
         if "code_expert" in available_labels:
             labels.append("code_expert")
     
-    # Matematik uzmanı modelleri
+    # Math expert models
     if any(term in model_id_lower or term in model_name for term in ["math", "numeric", "gemini", "gpt-4", "claude", "o1", "mixtral", "o3"]):
         if "math_expert" in available_labels:
             labels.append("math_expert")
     
-    # Görüntü işleme modelleri
+    # Vision models
     if any(term in model_id_lower or term in model_name for term in ["vision", "vl", "image", "pixtral", "visual"]):
         if "vision_expert" in available_labels:
             labels.append("vision_expert")
     
-    # Deneysel modeller
+    # Experimental models
     if any(term in model_id_lower for term in ["exp", "experimental", "beta", "preview"]):
         if "experimental" in available_labels:
             labels.append("experimental")
     
-    # Akıl yürütme uzmanları
+    # Reasoning experts
     if any(term in model_id_lower or term in model_name for term in ["reasoning", "gemini", "claude", "gpt-4", "o1", "mixtral"]):
         if "reasoning_expert" in available_labels:
             labels.append("reasoning_expert")
     
-    # Hızlı yanıt modelleri
+    # Fast response models
     if any(term in model_id_lower for term in ["flash", "haiku", "mini", "small", "fast"]):
         if "fast_response" in available_labels:
             labels.append("fast_response")
     
-    # Talimat takip etme
+    # Instruction following
     if "instruct" in model_id_lower:
         if "instruction_following" in available_labels:
             labels.append("instruction_following")
     
-    # Çokdilli modeller
+    # Multilingual models
     if any(term in model_id_lower for term in ["multilingual", "multi-lingual"]):
         if "multilingual" in available_labels:
             labels.append("multilingual")
     
-    # Konuşmacı modeller - yeni eklenen etiket için kontrol
+    # Conversational models
     if any(term in model_id_lower for term in ["chat", "convers", "talk"]):
         if "conversationalist" in available_labels:
             labels.append("conversationalist")
     
-    # Yaratıcı yazar modelleri
+    # Creative writer models
     if any(term in model_id_lower for term in ["creative", "writer", "narrat"]):
         if "creative_writer" in available_labels:
             labels.append("creative_writer")
     
-    # Model boyutuna göre etiketleme
+    # Label based on model size
     size_match = re.search(r'(\d+)[bB]', model_id)
     if size_match:
         size = int(size_match.group(1))
-        if size >= 70:  # Büyük modeller genellikle akıl yürütmede daha iyidir
+        if size >= 70:  # Large models are generally better at reasoning
             if "reasoning_expert" in available_labels and "reasoning_expert" not in labels:
                 labels.append("reasoning_expert")
     
-    # Eğer hiç etiket belirlenemezse, general_assistant'ı varsayılan olarak ekle
+    # If no labels determined, add general_assistant by default
     if not labels and "general_assistant" in available_labels:
         labels.append("general_assistant")
     
-    # Etiketleri benzersiz yap ve sadece geçerli (model_roles.json'da tanımlı) olanları tut
+    # Make labels unique and keep only valid ones
     valid_labels = list(set([label for label in labels if label in available_labels]))
     
-    # Eğer hiç geçerli etiket yoksa, "general_assistant" ekle (eğer tanımlıysa)
+    # If no valid labels remain, add "general_assistant" (if defined)
     if not valid_labels and "general_assistant" in available_labels:
         valid_labels.append("general_assistant")
     
@@ -351,47 +351,47 @@ def determine_labels_for_model(model_info, available_labels, existing_labels):
 
 def update_model_labels(min_date=None):
     """
-    OpenRouter API'den model listesini çeker ve model_labels.json dosyasını günceller.
-    Mevcut etiketleri korur ve yeni modeller için otomatik etiketleme yapar.
-    ÖNEMLİ: Tüm etiketlerin model_roles.json'da tanımlı olduğunu doğrular.
+    Fetches model list from OpenRouter API and updates model_labels.json.
+    Preserves existing labels and auto-labels new models.
+    IMPORTANT: Verifies all labels are defined in model_roles.json.
     
     Args:
         min_date: Optional date string in format 'YYYY-MM-DD' to filter models created after this date
     """
-    # Mevcut dosyaları yedekle
+    # Backup existing files
     if not backup_file(MODEL_LABELS_FILE):
-        # Web arayüzünde çalıştığında input sorun yaratabilir, bu yüzden yedekleme hatası olsa bile devam et
-        logger.warning("Yedekleme yapılamadı, devam ediliyor...")
+        # Continue even if backup fails (might happen in web interface)
+        logger.warning("Backup failed, continuing...")
     
-    # Veri kaynaklarını yükle - artık tarih filtresi ile
+    # Load data sources
     openrouter_models = get_openrouter_models(min_date=min_date, sort_by_newest=True)
     available_labels = get_available_labels()
     existing_labels = get_existing_model_labels()
     
     if not openrouter_models:
-        logger.error("OpenRouter modelleri alınamadı, işlem iptal ediliyor")
+        logger.error("Could not retrieve OpenRouter models, aborting")
         return False
     
     if not available_labels:
-        logger.error("Kullanılabilir etiketler yüklenemedi, işlem iptal ediliyor")
-        logger.error("model_roles.json dosyasını kontrol edin! Önce update_model_roles.py çalıştırılmalı olabilir.")
+        logger.error("Could not load available labels, aborting")
+        logger.error("Check model_roles.json! You might need to run update_model_roles.py first.")
         return False
     
-    # Uyarı: model_roles.json'dan kullanılabilir etiketleri göster
-    logger.info(f"model_roles.json'da tanımlı {len(available_labels)} etiket: {', '.join(available_labels)}")
+    # Info: Show available labels from model_roles.json
+    logger.info(f"{len(available_labels)} labels defined in model_roles.json: {', '.join(available_labels)}")
     
-    # Mevcut etiketlerdeki tutarsızlıkları kontrol et
+    # Check inconsistencies in existing labels
     invalid_labels_count = 0
     for model_id, labels in existing_labels.items():
         invalid_labels = [label for label in labels if label not in available_labels]
         if invalid_labels:
             invalid_labels_count += 1
-            logger.warning(f"Model {model_id} tanımsız etiketler içeriyor: {', '.join(invalid_labels)}")
+            logger.warning(f"Model {model_id} contains undefined labels: {', '.join(invalid_labels)}")
     
     if invalid_labels_count > 0:
-        logger.warning(f"Toplam {invalid_labels_count} model tanımsız etiketler içeriyor. Bu etiketler temizlenecek.")
+        logger.warning(f"Total {invalid_labels_count} models contain undefined labels. These labels will be cleaned.")
     
-    # Yeni model_labels.json verisi oluştur
+    # Create new model_labels.json data
     new_model_labels = []
     updated_count = 0
     new_count = 0
@@ -402,64 +402,64 @@ def update_model_labels(min_date=None):
         if not model_id:
             continue
         
-        # Model etiketlerini belirle - bu fonksiyon artık sadece geçerli etiketleri döndürür
+        # Determine model labels - this function returns only valid labels
         old_labels = existing_labels.get(model_id, [])
         labels = determine_labels_for_model(model, available_labels, existing_labels)
         
-        # Yeni veya güncellenen model sayısını izle
+        # Track new or updated models
         if model_id in existing_labels:
             old_valid_labels = [label for label in old_labels if label in available_labels]
-            # Eğer eski etiketlerle yeni etiketler arasında fark varsa
+            # If difference between old and new labels
             if set(labels) != set(old_valid_labels):
-                # Eğer eski etiketlerde tanımsız etiketler vardıysa, temizlendiler
+                # If old labels had undefined labels, they were cleaned
                 if len(old_valid_labels) != len(old_labels):
                     cleaned_count += 1
-                    logger.info(f"Model {model_id} için tanımsız etiketler temizlendi: " +
-                              f"Eski: {old_labels}, Yeni: {labels}")
+                    logger.info(f"Undefined labels cleaned for model {model_id}: " +
+                              f"Old: {old_labels}, New: {labels}")
                 else:
                     updated_count += 1
         else:
             new_count += 1
-            logger.info(f"Yeni model eklendi: {model_id} - Etiketler: {labels}")
+            logger.info(f"New model added: {model_id} - Labels: {labels}")
         
-        # Son olarak, modelin en az bir etiketi olduğundan emin ol
+        # Finally, ensure model has at least one label
         if not labels and "general_assistant" in available_labels:
             labels = ["general_assistant"]
-            logger.warning(f"Model {model_id} için hiç etiket belirlenemedi. 'general_assistant' eklendi.")
+            logger.warning(f"No labels could be determined for model {model_id}. 'general_assistant' added.")
         
-        # Modeli yeni listeye ekle
+        # Add model to new list
         new_model_labels.append({
             "model": model_id,
             "labels": labels
         })
     
-    # Değişiklikleri kaydet
+    # Save changes
     if save_json(MODEL_LABELS_FILE, new_model_labels):
-        logger.info(f"Model etiketleri güncellendi: {len(new_model_labels)} toplam model")
-        logger.info(f"  - {new_count} yeni model eklendi")
-        logger.info(f"  - {updated_count} mevcut model güncellendi")
-        logger.info(f"  - {cleaned_count} model tanımsız etiketlerden temizlendi")
+        logger.info(f"Model labels updated: {len(new_model_labels)} total models")
+        logger.info(f"  - {new_count} new models added")
+        logger.info(f"  - {updated_count} existing models updated")
+        logger.info(f"  - {cleaned_count} models cleaned of undefined labels")
         
-        # Son kontrol - tüm etiketler model_roles.json'da tanımlı mı?
+        # Final check - are all labels defined in model_roles.json?
         all_used_labels = set()
         for entry in new_model_labels:
             all_used_labels.update(entry.get("labels", []))
         
         missing_roles = [label for label in all_used_labels if label not in available_labels]
         if missing_roles:
-            logger.error(f"HATA: Bazı etiketler hala model_roles.json'da tanımlı değil: {', '.join(missing_roles)}")
-            logger.error("Bu bir mantık hatası olmamalı! Kodunuzu kontrol edin.")
+            logger.error(f"ERROR: Some labels are still not defined in model_roles.json: {', '.join(missing_roles)}")
+            logger.error("This should not be a logic error! Check your code.")
             return False
         else:
-            logger.info("Tutarlılık kontrolü başarılı: Tüm etiketler model_roles.json'da tanımlı.")
+            logger.info("Consistency check passed: All labels are defined in model_roles.json.")
         
         return True
     else:
-        logger.error("Model etiketleri güncellenirken hata oluştu")
+        logger.error("Error occurred while updating model labels")
         return False
 
 if __name__ == "__main__":
-    logger.info("Model etiketleri güncelleme aracı başlatılıyor...")
+    logger.info("Starting Model Labels Updater...")
     
     import argparse
     

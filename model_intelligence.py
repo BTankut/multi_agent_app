@@ -17,7 +17,25 @@ LABELS_FILE = DATA_DIR / "model_labels.json"
 ROLES_FILE = DATA_DIR / "model_roles.json"
 
 # Default analyst model - fast, capable, and up-to-date
-DEFAULT_ANALYST_MODEL = "x-ai/grok-4.1-fast:free"  # Using free tier if available, or paid if configured
+DEFAULT_ANALYST_MODEL = "anthropic/claude-3.5-haiku"
+
+# Strict System Prompt
+SYSTEM_PROMPT = """You are an expert AI Model Analyst. Your task is to analyze a list of LLM models and categorize them.
+
+CRITICAL INSTRUCTION: You must return ONLY a valid JSON list. Do not include any explanations, markdown formatting (like ```json), or extra text.
+
+For each model in the provided list, output a JSON object with:
+1. "id": The model ID (as provided).
+2. "tier": 1 (Premium/Flagship like GPT-4, Claude 3.5, DeepSeek V3), 2 (Strong like Claude 3 Haiku, Gemini Flash), or 3 (Standard/Unknown).
+3. "capabilities": A list of strings from ["code", "math", "reasoning", "creative_writing", "vision", "general"].
+4. "recommended_role": A specific system prompt for this model.
+5. "is_image_generation": Boolean (true if it's an image generation model like Midjourney/DALL-E, false otherwise).
+
+Example Output Format:
+[
+  {"id": "openai/gpt-4", "tier": 1, "capabilities": ["reasoning", "code"], "recommended_role": "...", "is_image_generation": false},
+  {"id": "stabilityai/stable-diffusion", "tier": 3, "capabilities": ["vision"], "recommended_role": "...", "is_image_generation": true}
+]"""
 
 def analyze_models(analyst_model=None, batch_size=20):
     """
@@ -86,8 +104,8 @@ def analyze_models(analyst_model=None, batch_size=20):
         user_prompt = json.dumps(batch_input, indent=2)
         
         try:
-            # Call the analyst agent
-            response_tuple = call_agent(analyst_model, "You are an expert AI Model Analyst.", user_prompt, models, reasoning_mode="disabled")
+            # Call the analyst agent with strict system prompt
+            response_tuple = call_agent(analyst_model, SYSTEM_PROMPT, user_prompt, models, reasoning_mode="disabled")
             
             # Handle response tuple
             if isinstance(response_tuple, tuple):
@@ -96,13 +114,26 @@ def analyze_models(analyst_model=None, batch_size=20):
                 response_text = response_tuple
                 
             # Clean response
-            if "```json" in response_text:
+            response_text = response_text.strip()
+            
+            # Try to extract JSON list structure
+            start_idx = response_text.find('[')
+            end_idx = response_text.rfind(']')
+            
+            if start_idx != -1 and end_idx != -1:
+                response_text = response_text[start_idx:end_idx+1]
+            elif "```json" in response_text:
                 response_text = response_text.split("```json")[1].split("```")[0].strip()
             elif "```" in response_text:
                 response_text = response_text.split("```")[1].split("```")[0].strip()
                 
             # Parse JSON
-            batch_results = json.loads(response_text)
+            try:
+                batch_results = json.loads(response_text)
+            except json.JSONDecodeError as je:
+                logger.error(f"JSON Decode Error: {je}")
+                logger.error(f"Raw response snippet: {response_text[:200]}...")
+                continue # Skip this batch and continue
             
             # Validate and merge
             if isinstance(batch_results, list):

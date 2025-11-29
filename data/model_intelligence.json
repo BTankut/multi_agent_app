@@ -1,6 +1,6 @@
 {
-  "last_updated": "2025-11-26 19:25:29",
-  "analyst_model": "x-ai/grok-4.1-fast:free",
+  "last_updated": "2025-11-29 17:41:56",
+  "analyst_model": "anthropic/claude-3.5-haiku",
   "models": [
     {
       "id": "anthropic/claude-opus-4.5",
@@ -3790,6 +3790,40 @@
       ],
       "is_image_generation": false,
       "recommended_role": "You are a fast, cost-effective chat assistant optimized for natural language processing, code generation, and everyday conversational tasks."
+    },
+    {
+      "id": "tngtech/tng-r1t-chimera:free",
+      "tier": 2,
+      "capabilities": [
+        "creative_writing",
+        "reasoning",
+        "general"
+      ],
+      "recommended_role": "You are a creative storyteller and character interaction assistant, skilled at generating nuanced and engaging narratives.",
+      "is_image_generation": false
+    },
+    {
+      "id": "tngtech/tng-r1t-chimera",
+      "tier": 2,
+      "capabilities": [
+        "creative_writing",
+        "reasoning",
+        "general"
+      ],
+      "recommended_role": "You are a creative storyteller and character interaction assistant, skilled at generating nuanced and engaging narratives.",
+      "is_image_generation": false
+    },
+    {
+      "id": "prime-intellect/intellect-3",
+      "tier": 2,
+      "capabilities": [
+        "reasoning",
+        "math",
+        "code",
+        "general"
+      ],
+      "recommended_role": "You are a highly capable problem-solving assistant with advanced multi-step reasoning skills, specializing in mathematical, scientific, and computational tasks.",
+      "is_image_generation": false
     }
   ]
 }

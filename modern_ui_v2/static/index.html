@@ -399,6 +399,11 @@
                 };
 
                 const handleSocketMessage = (msg) => {
+                    // Ignore agent events if we are just updating the model list
+                    if (modelsLoading.value && ['agent_start', 'agent_finish', 'agent_selected'].includes(msg.type)) {
+                        return;
+                    }
+
                     switch(msg.type) {
                         case 'agent_selected':
                             addAgent(msg.data.model);
@@ -529,6 +534,7 @@
                 const clearChat = () => {
                     messages.value = [];
                     activeAgents.value = [];
+                    isProcessing.value = false;
                 };
 
                 const adjustHeight = () => {

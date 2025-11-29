@@ -325,6 +325,15 @@ def call_agents_parallel(model_names, model_roles, query, openrouter_models, age
     logger.info(f"Completed parallel API calls for {len(results)} models")
     return results
 
+def is_native_reasoning_model(model_name):
+    """
+    Checks if a model has native reasoning capabilities (Chain of Thought) enabled by default.
+    For these models, adding explicit reasoning parameters might cause errors or be redundant.
+    """
+    name = model_name.lower()
+    native_indicators = ["o1", "o3", "r1", "thinking", "reasoner"]
+    return any(indicator in name for indicator in native_indicators)
+
 def call_agent(model_name, role, query, openrouter_models, conversation_history=None, is_coordinator=False, is_tiebreaker=False, reasoning_mode=None):
     """
     Calls an OpenRouter model with error handling and logging.
@@ -418,10 +427,17 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
             # Track if reasoning was disabled due to model not supporting it
             reasoning_fallback_used = False
 
-            # Add reasoning to payload if enabled
-            if use_reasoning:
-                request_payload["reasoning"] = True
-                logger.info(f"Using reasoning mode for model: {model_name}")
+            # Check for models that have NATIVE reasoning
+            is_native = is_native_reasoning_model(model_name)
+            
+            if is_native:
+                # Native models reason by default. Do NOT send explicit parameter to avoid 400 errors.
+                # We consider reasoning active for logic purposes.
+                pass 
+            elif use_reasoning:
+                # For non-native models, try to force reasoning via OpenRouter parameter
+                request_payload["include_reasoning"] = True
+                logger.info(f"Using reasoning mode (include_reasoning=True) for model: {model_name}")
 
             # Make API request
             response = requests.post(
@@ -431,11 +447,11 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                 timeout=45
             )
 
-            # If 400 error and reasoning was enabled, retry without reasoning
-            if response.status_code == 400 and use_reasoning:
-                logger.warning(f"Model {model_name} does not support reasoning, retrying without it")
+            # If 400 error and reasoning was enabled via parameter, retry without it
+            if response.status_code == 400 and use_reasoning and "include_reasoning" in request_payload:
+                logger.warning(f"Model {model_name} does not support include_reasoning, retrying without it")
                 reasoning_fallback_used = True
-                request_payload.pop("reasoning", None)
+                request_payload.pop("include_reasoning", None)
                 response = requests.post(
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers=headers,
@@ -496,6 +512,18 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                 return (f"Error: No content found in response message", 
                        {"tokens": token_usage, "time": time.time() - start_time, "cost": 0.0})
             
+            # Check for reasoning content in response (for native or enabled reasoning models)
+            reasoning_content = None
+            if 'reasoning' in result['choices'][0]:
+                reasoning_content = result['choices'][0]['reasoning']
+            
+            content = result['choices'][0]['message']['content']
+            
+            # If reasoning content exists, prepend it nicely (optional, or handle separately)
+            if reasoning_content:
+                logger.info(f"Received reasoning content from {model_name}")
+                content = f"**Reasoning Process:**\n\n{reasoning_content}\n\n---\n\n{content}"
+
             # Extract token usage info if available
             if 'usage' in result:
                 usage = result['usage']
@@ -531,7 +559,6 @@ def call_agent(model_name, role, query, openrouter_models, conversation_history=
                         # Fallback if no tokens (shouldn't happen but just in case)
                         cost = (prompt_cost_per_million + completion_cost_per_million) / 2
                     
-            content = result['choices'][0]['message']['content']
             return (content, {
                 "tokens": token_usage,
                 "time": completion_time,

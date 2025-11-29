@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Model Rolleri Güncelleme Aracı
-model_roles.json dosyasını yeniden düzenler ve model_labels.json ile uyumlu hale getirir.
+Model Roles Updater
+Reorganizes model_roles.json and ensures consistency with model_labels.json.
 """
 
 import os
@@ -10,43 +10,43 @@ import logging
 import time
 from dotenv import load_dotenv
 
-# Logging ayarları
+# Logging settings
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Sabit dosya yolları
+# Constants
 MODEL_LABELS_FILE = "data/model_labels.json"
 MODEL_ROLES_FILE = "data/model_roles.json"
 BACKUP_DIR = "data/backups"
 
 def ensure_backup_dir():
-    """Yedekleme dizininin var olduğundan emin olur"""
+    """Ensures backup directory exists"""
     if not os.path.exists(BACKUP_DIR):
         os.makedirs(BACKUP_DIR)
-        logger.info(f"Yedekleme dizini oluşturuldu: {BACKUP_DIR}")
+        logger.info(f"Backup directory created: {BACKUP_DIR}")
 
 def load_json(file_path):
-    """JSON dosyasını yükler"""
+    """Loads JSON file"""
     try:
         with open(file_path, 'r') as file:
             return json.load(file)
     except Exception as e:
-        logger.error(f"Dosya yüklenirken hata: {e}")
+        logger.error(f"Error loading file: {e}")
         return None
 
 def save_json(file_path, data):
-    """JSON verilerini dosyaya kaydeder"""
+    """Saves JSON data to file"""
     try:
         with open(file_path, 'w') as file:
             json.dump(data, file, indent=2)
-        logger.info(f"Dosya başarıyla kaydedildi: {file_path}")
+        logger.info(f"File saved successfully: {file_path}")
         return True
     except Exception as e:
-        logger.error(f"Dosya kaydedilirken hata: {e}")
+        logger.error(f"Error saving file: {e}")
         return False
 
 def backup_file(file_path):
-    """Bir dosyanın zaman damgalı yedeğini oluşturur ve eski yedekleri temizler"""
+    """Creates a timestamped backup of a file and cleans old backups"""
     ensure_backup_dir()
     timestamp = time.strftime("%Y%m%d-%H%M%S")
     filename = os.path.basename(file_path)
@@ -56,44 +56,44 @@ def backup_file(file_path):
         data = load_json(file_path)
         if data:
             save_json(backup_path, data)
-            logger.info(f"Yedek oluşturuldu: {backup_path}")
+            logger.info(f"Backup created: {backup_path}")
             
-            # Eski yedekleri temizle - her dosya türü için en son 5 yedek dışındakileri sil
+            # Clean old backups - keep only last 5 for each file type
             clean_old_backups(filename)
             return True
     except Exception as e:
-        logger.error(f"Yedekleme sırasında hata: {e}")
+        logger.error(f"Error during backup: {e}")
     
     return False
 
 def clean_old_backups(filename_prefix):
-    """Belirli bir türdeki eski yedekleri temizler, sadece en son 5 tanesini tutar"""
+    """Cleans old backups of a specific type, keeping only the last 5"""
     try:
-        # İlgili dosya yedeklerini bul
+        # Find related backup files
         backup_files = []
         for file in os.listdir(BACKUP_DIR):
             if file.startswith(filename_prefix) and file.endswith(".bak"):
                 file_path = os.path.join(BACKUP_DIR, file)
                 backup_files.append((file_path, os.path.getmtime(file_path)))
         
-        # Son değişiklik zamanına göre sırala (en yeni en sonda)
+        # Sort by modification time (newest last)
         backup_files.sort(key=lambda x: x[1])
         
-        # En son 5 yedek dışındakileri sil
+        # Delete older than last 5
         if len(backup_files) > 5:
-            for file_path, _ in backup_files[:-5]:  # En eski dosyaları sil
+            for file_path, _ in backup_files[:-5]:
                 os.remove(file_path)
-                logger.info(f"Eski yedek temizlendi: {file_path}")
+                logger.info(f"Old backup cleaned: {file_path}")
             
-            logger.info(f"{len(backup_files)-5} eski yedek temizlendi, {min(5, len(backup_files))} yedek tutuldu")
+            logger.info(f"Cleaned {len(backup_files)-5} old backups, kept {min(5, len(backup_files))} backups")
     except Exception as e:
-        logger.error(f"Eski yedekler temizlenirken hata: {e}")
+        logger.error(f"Error cleaning old backups: {e}")
 
 def get_all_labels_from_model_labels():
-    """model_labels.json'dan kullanılan tüm benzersiz etiketleri çeker"""
+    """Extracts all unique labels used in model_labels.json"""
     model_labels_data = load_json(MODEL_LABELS_FILE)
     if not model_labels_data:
-        logger.error("model_labels.json yüklenemedi!")
+        logger.error("Could not load model_labels.json!")
         return set()
     
     all_labels = set()
@@ -105,29 +105,29 @@ def get_all_labels_from_model_labels():
 
 def update_model_roles():
     """
-    model_roles.json dosyasını yeniden düzenler ve model_labels.json ile uyumlu hale getirir.
-    Tutarlılık kontrolü yaparak tüm etiketlerin hem tanımlandığından hem de kullanıldığından emin olur.
+    Reorganizes model_roles.json and ensures consistency with model_labels.json.
+    Performs consistency checks to ensure all labels are both defined and used.
     """
-    # Mevcut dosyaları yedekle
+    # Backup existing files
     if not backup_file(MODEL_ROLES_FILE):
-        # Web arayüzünde çalıştığında input sorun yaratabilir, bu yüzden yedekleme hatası olsa bile devam et
-        logger.warning("Yedekleme yapılamadı, devam ediliyor...")
+        # Continue even if backup fails (might happen in web interface)
+        logger.warning("Backup failed, continuing...")
     
-    # Veri kaynaklarını yükle
+    # Load data sources
     model_roles_data = load_json(MODEL_ROLES_FILE)
     if not model_roles_data:
-        logger.error("model_roles.json yüklenemedi!")
+        logger.error("Could not load model_roles.json!")
         return False
     
-    # model_labels.json'dan tüm kullanılan etiketleri al
+    # Get all used labels from model_labels.json
     all_used_labels = get_all_labels_from_model_labels()
-    logger.info(f"model_labels.json'da {len(all_used_labels)} benzersiz etiket kullanılıyor")
+    logger.info(f"{len(all_used_labels)} unique labels used in model_labels.json")
     
-    # Mevcut etiket ve rol tanımlarını çıkart
+    # Extract existing label and role definitions
     existing_label_descriptions = {}
     existing_role_prompts = {}
     
-    # "labels" bölümünden etiket açıklamalarını al
+    # Get label descriptions from "labels" section
     if "labels" in model_roles_data:
         for label_entry in model_roles_data["labels"]:
             label = label_entry.get("label", "")
@@ -135,7 +135,7 @@ def update_model_roles():
             if label:
                 existing_label_descriptions[label] = description
     
-    # "roles" bölümünden rol promptlarını al
+    # Get role prompts from "roles" section
     if "roles" in model_roles_data:
         for role_entry in model_roles_data["roles"]:
             label = role_entry.get("label", "")
@@ -143,23 +143,23 @@ def update_model_roles():
             if label:
                 existing_role_prompts[label] = prompt
     
-    # Tutarsızlık kontrolü yap - iki koleksiyonda tanımlı olanları kontrol et
-    # 1. Hangi etiketler mevcut ama rol tanımı yok?
+    # Check for inconsistencies
+    # 1. Labels with definitions but no role prompts
     labels_without_roles = [label for label in existing_label_descriptions if label not in existing_role_prompts]
     if labels_without_roles:
-        logger.warning(f"Bu etiketlerin tanımı var ama rol promptu yok: {', '.join(labels_without_roles)}")
+        logger.warning(f"These labels have definitions but no role prompt: {', '.join(labels_without_roles)}")
         
-    # 2. Hangi rollerin etiketi yok?
+    # 2. Roles without label definitions
     roles_without_labels = [label for label in existing_role_prompts if label not in existing_label_descriptions]
     if roles_without_labels:
-        logger.warning(f"Bu rol promptlarının etiket tanımı yok: {', '.join(roles_without_labels)}")
+        logger.warning(f"These role prompts have no label definition: {', '.join(roles_without_labels)}")
     
-    # 3. Hangi kullanılan etiketlerin tanımı yok?
+    # 3. Used labels without definitions
     used_without_definition = [label for label in all_used_labels if label not in existing_label_descriptions]
     if used_without_definition:
-        logger.warning(f"Bu etiketler kullanılıyor ama tanımı yok: {', '.join(used_without_definition)}")
+        logger.warning(f"These labels are used but have no definition: {', '.join(used_without_definition)}")
     
-    # Eksik etiketler için varsayılan açıklamalar
+    # Default descriptions for missing labels
     default_descriptions = {
         "general_assistant": "A general-purpose assistant that can help with a wide variety of tasks.",
         "reasoning_expert": "An expert in reasoning and logical thinking, particularly good at solving complex problems.",
@@ -182,7 +182,7 @@ def update_model_roles():
         "multimodal": "Capable of processing and understanding multiple types of input like text and images."
     }
     
-    # Eksik etiketler için varsayılan promptlar
+    # Default prompts for missing labels
     default_prompts = {
         "general_assistant": "You are a helpful, versatile assistant capable of providing information and assistance on various topics. Respond clearly and helpfully to the user's requests. Always respond in the same language as the user's query.",
         "reasoning_expert": "You are an expert at logical reasoning and problem-solving. Carefully analyze problems, break them down into components, and provide step-by-step, well-reasoned solutions. Always respond in the same language as the user's query.",
@@ -205,23 +205,23 @@ def update_model_roles():
         "multimodal": "You can process both text and images. Analyze visual content when provided and integrate that understanding with textual information in your responses. Always respond in the same language as the user's query."
     }
     
-    # Yeni "labels" ve "roles" bölümleri oluştur
+    # Create new "labels" and "roles" sections
     new_labels = []
     new_roles = []
     
-    # Tüm etiketleri işle
+    # Process all labels
     processed_labels = set()
     
-    # Önce model_labels.json'da kullanılan etiketleri ekle
+    # First add labels used in model_labels.json
     for label in sorted(all_used_labels):
-        # Açıklama ekle (varsa mevcut açıklamayı kullan, yoksa varsayılanı)
+        # Add description (use existing if available, else default)
         description = existing_label_descriptions.get(label, default_descriptions.get(label, f"A model specialized in {label} capabilities."))
         new_labels.append({
             "label": label,
             "description": description
         })
         
-        # Etiket için prompt ekle (varsa mevcut promptu kullan, yoksa varsayılanı)
+        # Add prompt for label (use existing if available, else default)
         prompt = existing_role_prompts.get(label, default_prompts.get(label, f"You are a specialized AI with expertise in {label}. Provide accurate and helpful responses relevant to this specialization. Always respond in the same language as the user's query."))
         new_roles.append({
             "label": label,
@@ -230,7 +230,7 @@ def update_model_roles():
         
         processed_labels.add(label)
     
-    # Mevcut tanımlı ancak şu an kullanılmayan etiketleri de ekle (ileride kullanılabilir)
+    # Add existing defined labels that are not currently used (for future use)
     for label in existing_label_descriptions:
         if label not in processed_labels:
             new_labels.append({
@@ -238,13 +238,13 @@ def update_model_roles():
                 "description": existing_label_descriptions[label]
             })
             
-            # Etiket için prompt varsa ekle
+            # If prompt exists for label, add it
             if label in existing_role_prompts:
                 new_roles.append({
                     "label": label,
                     "prompt": existing_role_prompts[label]
                 })
-            # Yoksa varsayılan ekle
+            # Else add default
             else:
                 prompt = default_prompts.get(label, f"You are a specialized AI with expertise in {label}. Provide accurate and helpful responses relevant to this specialization. Always respond in the same language as the user's query.")
                 new_roles.append({
@@ -254,27 +254,27 @@ def update_model_roles():
             
             processed_labels.add(label)
     
-    # Tüm promptlara dil uyumu talimatını ekle (eğer yoksa)
+    # Add language consistency instruction to all prompts (if missing)
     updated_roles = []
     for role_entry in new_roles:
         prompt = role_entry["prompt"]
         language_instruction = "Always respond in the same language as the user's query."
         
-        # Eğer prompt zaten dil talimatı içermiyorsa
+        # If prompt doesn't already contain language instruction
         if language_instruction not in prompt:
-            # Promptun sonuna ekle
+            # Append to end of prompt
             updated_prompt = prompt + " " + language_instruction
             role_entry["prompt"] = updated_prompt
             
         updated_roles.append(role_entry)
     
-    # Yeni model_roles.json verisini oluştur
+    # Create new model_roles.json data
     new_model_roles = {
         "labels": new_labels,
         "roles": updated_roles
     }
     
-    # Etiket-rol tutarlılık kontrolü
+    # Label-role consistency check
     label_names = {entry["label"] for entry in new_labels}
     role_names = {entry["label"] for entry in updated_roles}
     
@@ -282,26 +282,26 @@ def update_model_roles():
     missing_labels = role_names - label_names
     
     if missing_roles:
-        logger.error(f"Bu etiketlerin rol tanımı yok: {', '.join(missing_roles)}")
+        logger.error(f"These labels have no role definition: {', '.join(missing_roles)}")
         return False
         
     if missing_labels:
-        logger.error(f"Bu rollerin etiket tanımı yok: {', '.join(missing_labels)}")
+        logger.error(f"These roles have no label definition: {', '.join(missing_labels)}")
         return False
     
-    # Değişiklikleri kaydet
+    # Save changes
     if save_json(MODEL_ROLES_FILE, new_model_roles):
-        logger.info(f"Model rolleri güncellendi:")
-        logger.info(f"  - {len(new_labels)} etiket tanımı")
-        logger.info(f"  - {len(updated_roles)} rol promptu")
-        logger.info(f"  - Tüm etiketlerin rol tanımı var")
-        logger.info(f"  - Tüm rollerin etiket tanımı var")
-        logger.info(f"  - Tüm promptlarda dil uyumu talimatı eklendi")
+        logger.info(f"Model roles updated:")
+        logger.info(f"  - {len(new_labels)} label definitions")
+        logger.info(f"  - {len(updated_roles)} role prompts")
+        logger.info(f"  - All labels have role definitions")
+        logger.info(f"  - All roles have label definitions")
+        logger.info(f"  - Language consistency instructions added to all prompts")
         return True
     else:
-        logger.error("Model rolleri güncellenirken hata oluştu")
+        logger.error("Error occurred while updating model roles")
         return False
 
 if __name__ == "__main__":
-    logger.info("Model rolleri güncelleme aracı başlatılıyor...")
+    logger.info("Starting Model Roles Updater...")
     update_model_roles()

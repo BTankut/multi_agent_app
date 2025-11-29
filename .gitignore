@@ -37,3 +37,4 @@ ENV/
 *.swo
 # Log files
 logs/
+logs/

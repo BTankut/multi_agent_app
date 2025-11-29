@@ -18,8 +18,7 @@ import uvicorn
 from utils import get_openrouter_models, logger as app_logger
 from coordinator import process_query
 import update_model_roles
-import update_model_labels
-import model_intelligence  # New module
+import model_intelligence
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -177,12 +176,19 @@ async def get_models(force_refresh: bool = False):
     # Fetch fresh data
     try:
         if force_refresh:
-            logger.info("Force refresh requested. Updating model roles and labels...")
-            # First update roles (definitions)
+            logger.info("Force refresh requested. Starting AI Model Intelligence analysis...")
+            
+            # First update roles definitions (static structure)
             update_model_roles.update_model_roles()
-            # Then update labels (assignments) based on fresh API data
-            update_model_labels.update_model_labels()
-            logger.info("Model roles and labels updated successfully.")
+            
+            # Then run the AI analyst to update labels and specific roles
+            # This might take time but it supports resuming
+            result = model_intelligence.analyze_models()
+            
+            if result.get("success"):
+                logger.info(f"AI Analysis complete. {result.get('count', 0)} models analyzed/updated.")
+            else:
+                logger.error(f"AI Analysis failed: {result.get('error')}")
 
         models = get_openrouter_models()
         import datetime
