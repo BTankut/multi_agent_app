@@ -1,6 +1,6 @@
 # 🧠 Multi-Agent AI Orchestrator
 
-![Multi-Agent Orchestrator Banner](assets/banner.png)
+![Multi-Agent Orchestrator Banner](assets/banner_v2.png)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -30,7 +30,7 @@ This project goes beyond simple routing. It features an **"AI-Powered Intelligen
 
 ## 🛠️ How It Works
 
-![System Architecture](assets/architecture_v2.png)
+![System Architecture](assets/architecture_v3.png)
 
 1.  **Analysis:** The Coordinator model understands your query and determines the required skill tags.
 2.  **Team Assembly:** Models best suited for the determined tags (OpenAI, Anthropic, Google, Meta, etc.) are selected from the pool.
