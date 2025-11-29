@@ -11,6 +11,8 @@
 
 ## 🌟 About
 
+![App Screenshot](assets/screenshot.png)
+
 The Multi-Agent AI Orchestrator is a next-generation system that solves complex problems not by relying on a single AI model, but by distributing the task to a **specialized team of agents**.
 
 Acting like a project manager, the **"Coordinator Agent"** analyzes your query, determines the necessary skills (Math, Coding, Creative Writing, Logic, etc.), and assembles the **optimal team** from hundreds of models available via OpenRouter.
